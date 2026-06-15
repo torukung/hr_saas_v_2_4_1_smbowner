@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adeptio Adaptive HR — Owner Edition · v2.4.1.smbowner</title>
+<meta name="description" content="Adeptio Adaptive HR · Owner Edition (v2.4.1.smbowner) — a multi-tenant HR platform for the Lao small business. The persona page lands first; entering a persona opens a clean pastel login portal with one pre-filled frame per persona. Three personas — Staff · Owner · Platform Administrator. Split payroll, accounting, LINE/WhatsApp. Demo data only.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%235C6493'/><text x='32' y='44' font-size='36' font-family='Manrope,sans-serif' font-weight='700' fill='white' text-anchor='middle'>A</text></svg>">
+
+<!-- Type: Manrope (UI) · JetBrains Mono (IDs) · Noto Sans Lao (staged for ລາວ) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Lao:wght@400;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body data-persona="">
+  <div id="app" aria-live="polite">
+    <noscript>
+      <div style="max-width:560px;margin:80px auto;font-family:sans-serif;text-align:center">
+        <h1>Adeptio Adaptive HR — Owner Edition</h1>
+        <p>This preview renders with vanilla JavaScript (no build step). Please enable JavaScript.</p>
+      </div>
+    </noscript>
+  </div>
+
+  <!-- No build step, no dependencies — plain scripts, GitHub Pages-ready. -->
+  <script src="js/i18n.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/engine/tax.js"></script>
+  <script src="js/engine/payroll.js"></script>
+  <script src="js/engine/ledger.js"></script>
+  <script src="js/engine/reports.js"></script>
+  <script src="js/engine/flags.js"></script>
+  <script src="js/engine/approvals.js"></script>
+  <script src="js/engine/dbops.js"></script>
+  <script src="js/engine/work.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/screens/staff.js"></script>
+  <script src="js/screens/owner.js"></script>
+  <script src="js/screens/platform.js"></script>
+  <script src="js/personas.js"></script>
+  <script src="js/screens/authviews.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
