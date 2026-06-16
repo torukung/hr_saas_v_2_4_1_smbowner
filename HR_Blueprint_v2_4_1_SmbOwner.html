@@ -1,0 +1,2001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adeptio Adaptive HR — Structure Blueprint v2.4.1.SmbOwner · Owner Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============ THEME: Enterprise Slate · Atelier Pastel (series style, do not drift) ============ */
+:root{
+  --brand:#5C6493; --brand-deep:#404668; --brand-bg:#E8E9F1;
+  --ink:#222127; --ink-2:#4A4954; --muted:#7C786F; --muted-2:#AFABA1;
+  --line:#E7E3DA; --line-2:#F0EDE6; --canvas:#F2F1EC; --surface:#FFFFFF; --surface-2:#FBFAF7;
+  --staff:#C28A4A; --staff-d:#7E5722; --staff-bg:#F4E8D6;
+  --mgr:#6E9A6E;  --mgr-d:#3F623F;  --mgr-bg:#DEEBDD;
+  --hr:#6E8FC0;   --hr-d:#3C567F;   --hr-bg:#E0E8F5;
+  --ceo:#9279B8;  --ceo-d:#5A4282;  --ceo-bg:#EAE2F3;
+  --sys:#5E91A0;  --sys-d:#345661;  --sys-bg:#DDEAEE;
+  --ok:#5E8C63; --ok-bg:#E2EEE3; --ok-text:#3F6244;
+  --warn:#C28A4A; --warn-bg:#F4E8D6; --warn-text:#8F6020;
+  --bad:#B5675C; --bad-bg:#F3E1DE; --bad-text:#94503F;
+  --r:16px; --r-sm:11px;
+  --sh:0 1px 1px rgba(40,38,33,.03), 0 12px 34px -20px rgba(40,38,33,.20);
+  --sh-sm:0 1px 2px rgba(40,38,33,.04);
+  --maxw:1200px;
+  --font:"Manrope",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+  --display:"Manrope",-apple-system,"SF Pro Display","Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:84px}
+body{margin:0; font-family:var(--font); color:var(--ink);
+  background:radial-gradient(1200px 500px at 80% -120px, #EEF0FE 0%, rgba(238,240,254,0) 60%),var(--canvas);
+  line-height:1.55; -webkit-font-smoothing:antialiased; font-size:15px; letter-spacing:-.003em}
+h1,h2,h3,h4{font-family:var(--display); color:var(--ink); margin:0; line-height:1.18; letter-spacing:-.016em; font-weight:400}
+p{margin:0}
+a{color:var(--brand-deep)}
+.wrap{max-width:var(--maxw); margin:0 auto; padding:0 28px}
+.small{font-size:12.5px} .muted{color:var(--muted)} .strong{font-weight:600}
+.mono{font-family:var(--mono); font-size:.92em}
+.topnav{position:sticky; top:0; z-index:50; background:rgba(242,241,236,.86); backdrop-filter:blur(10px); border-bottom:1px solid var(--line)}
+.topnav .wrap{display:flex; align-items:center; gap:18px; height:60px}
+.topnav .brand{font-weight:700; letter-spacing:-.02em; white-space:nowrap}
+.topnav .brand .v{font-family:var(--mono); font-weight:500; font-size:12px; color:var(--brand-deep); background:var(--brand-bg); border-radius:999px; padding:3px 9px; margin-left:8px}
+.topnav nav{display:flex; gap:2px; overflow-x:auto; scrollbar-width:none}
+.topnav nav::-webkit-scrollbar{display:none}
+.topnav nav a{font-size:12.5px; color:var(--ink-2); text-decoration:none; padding:6px 10px; border-radius:999px; white-space:nowrap}
+.topnav nav a:hover{background:var(--brand-bg); color:var(--brand-deep)}
+.hero{padding:60px 0 34px}
+.kicker{display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--brand-deep); background:var(--brand-bg); border:1px solid #D6D9EA; border-radius:999px; padding:6px 14px}
+.hero h1{font-size:clamp(30px,4.4vw,44px); margin:18px 0 14px; font-weight:300}
+.hero h1 b{font-weight:600}
+.hero .lede{max-width:880px; color:var(--ink-2); font-size:16.5px; line-height:1.65}
+.heromarks{display:flex; flex-wrap:wrap; gap:8px; margin-top:22px}
+.heromarks span{font-size:12px; border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:6px 13px; color:var(--ink-2); box-shadow:var(--sh-sm)}
+.heromarks span b{font-weight:600; color:var(--ink)}
+section{padding:32px 0 6px}
+.sechead{display:flex; align-items:baseline; gap:14px; margin-bottom:8px}
+.secno{font-family:var(--mono); font-size:13px; color:var(--brand-deep); background:var(--brand-bg); border-radius:9px; padding:4px 10px; white-space:nowrap}
+.sechead h2{font-size:clamp(21px,2.6vw,27px); font-weight:500}
+.secsub{color:var(--muted); max-width:880px; margin:4px 0 18px; font-size:14.5px}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--sh); padding:22px}
+.card h3{font-size:15.5px; font-weight:600; margin-bottom:10px; display:flex; align-items:center; gap:9px}
+.card h3 .dot{width:9px; height:9px; border-radius:50%; background:var(--brand); flex:none}
+.grid{display:grid; gap:16px}
+.cols-2{grid-template-columns:1fr 1fr}
+.cols-3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:880px){.cols-2,.cols-3{grid-template-columns:1fr}}
+.badge{display:inline-block; font-size:11px; font-weight:600; letter-spacing:.03em; border-radius:999px; padding:3px 10px; vertical-align:1px}
+.badge.ok{background:var(--ok-bg); color:var(--ok-text)}
+.badge.warn{background:var(--warn-bg); color:var(--warn-text)}
+.badge.bad{background:var(--bad-bg); color:var(--bad-text)}
+.badge.plain{background:var(--line-2); color:var(--ink-2)}
+.badge.brand{background:var(--brand-bg); color:var(--brand-deep)}
+.badge.sys{background:var(--sys-bg); color:var(--sys-d)}
+.badge.hr{background:var(--hr-bg); color:var(--hr-d)}
+.badge.staff{background:var(--staff-bg); color:var(--staff-d)}
+.badge.mgr{background:var(--mgr-bg); color:var(--mgr-d)}
+.badge.ceo{background:var(--ceo-bg); color:var(--ceo-d)}
+.badge.road{background:var(--line-2); color:var(--muted); border:1px dashed var(--muted-2)}
+.badge.adeptio{background:var(--ceo-bg); color:var(--ceo-d)}
+.tblwrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface)}
+table.tbl{width:100%; border-collapse:collapse; font-size:13.5px}
+.tbl th{font-size:11px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); font-weight:600; text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); background:var(--surface-2); white-space:nowrap}
+.tbl td{padding:11px 14px; border-bottom:1px solid var(--line-2); vertical-align:top}
+.tbl tr:last-child td{border-bottom:none}
+.tbl td.mono,.tbl .mono{font-family:var(--mono); font-size:12.5px}
+.tbl td.fn{font-weight:600; white-space:nowrap}
+.tbl td.num{text-align:right; font-family:var(--mono); font-size:12.5px; white-space:nowrap}
+.tbl th.num{text-align:right}
+.note{border-left:3px solid var(--brand); background:var(--brand-bg); border-radius:0 var(--r-sm) var(--r-sm) 0; padding:13px 16px; font-size:13.5px; color:var(--ink-2)}
+.note.ok{border-left-color:var(--ok); background:var(--ok-bg); color:var(--ok-text)}
+.note.warn{border-left-color:var(--warn); background:var(--warn-bg); color:var(--warn-text)}
+.rule{border:none; border-top:1px solid var(--line); margin:18px 0}
+ul.tick{list-style:none; padding:0; margin:0}
+ul.tick li{padding:7px 0 7px 26px; position:relative; font-size:13.5px; border-bottom:1px solid var(--line-2)}
+ul.tick li:last-child{border-bottom:none}
+ul.tick li::before{content:"✓"; position:absolute; left:2px; color:var(--ok); font-weight:700}
+ul.tick.x li::before{content:"—"; color:var(--muted-2)}
+.qa{border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface); margin-bottom:10px; padding:14px 16px}
+.qa .q{font-weight:600; font-size:14px}
+.qa .opts{margin-top:7px; font-size:13px; color:var(--ink-2)}
+.qa .opts b{color:var(--brand-deep)}
+.foot{padding:42px 0 60px; color:var(--muted); font-size:12.5px}
+.envelope{background:var(--surface-2); border:1px dashed var(--line); border-radius:var(--r-sm); padding:14px 16px; font-size:13px; line-height:1.7}
+.envelope .mono{color:var(--brand-deep)}
+.branch{display:flex; gap:0; flex-wrap:wrap; align-items:stretch}
+.branch .b{flex:1 1 220px; border:1px solid var(--line); background:var(--surface); padding:14px 16px}
+.branch .b:first-child{border-radius:var(--r-sm) 0 0 var(--r-sm)}
+.branch .b:last-child{border-radius:0 var(--r-sm) var(--r-sm) 0}
+.branch .b+.b{border-left:none}
+.branch .b h4{font-size:13.5px; font-weight:600; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.branch .b p{font-size:12px; color:var(--muted); margin-top:5px; line-height:1.55}
+.branch .b.cur{background:var(--brand-bg); border-color:#C9CDE2}
+/* phase cards */
+.phase{border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface); margin-bottom:12px; overflow:hidden}
+.phase .phead{display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--surface-2); border-bottom:1px solid var(--line-2); flex-wrap:wrap}
+.phase .pno{font-family:var(--mono); font-size:11px; color:var(--brand-deep); background:var(--brand-bg); border-radius:6px; padding:2px 8px}
+.phase .pt{font-weight:600; font-size:14px}
+.phase .pm{font-size:12px; color:var(--muted); font-style:italic; margin-left:auto}
+.phase table.tbl{font-size:13px}
+/* menu tree */
+.tree{font-family:var(--mono); font-size:12.5px; line-height:1.85; color:var(--ink-2); background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm); padding:16px 18px; overflow-x:auto; white-space:pre}
+.tree b{color:var(--brand-deep); font-weight:600}
+.tree .c{color:var(--muted)}
+/* flow rail */
+.flow{display:flex; flex-wrap:wrap; gap:0; align-items:stretch; counter-reset:fl}
+.flow .st{flex:1 1 140px; min-width:140px; position:relative; background:var(--surface); border:1px solid var(--line); padding:13px 13px 13px 15px; counter-increment:fl}
+.flow .st:first-child{border-radius:var(--r-sm) 0 0 var(--r-sm)}
+.flow .st:last-child{border-radius:0 var(--r-sm) var(--r-sm) 0}
+.flow .st+.st{border-left:none}
+.flow .st::before{content:counter(fl,decimal-leading-zero); font-family:var(--mono); font-size:10.5px; color:var(--brand-deep); background:var(--brand-bg); border-radius:6px; padding:2px 6px}
+.flow .st h4{font-size:13px; font-weight:600; margin:7px 0 4px}
+.flow .st p{font-size:11.5px; color:var(--muted); line-height:1.5}
+.legend{display:flex; flex-wrap:wrap; gap:14px; margin:2px 0 16px; align-items:center}
+.legend .g{font-size:12px; display:inline-flex; align-items:center; gap:7px; color:var(--ink-2)}
+.gc{display:inline-block; width:11px; height:11px; border-radius:3px; flex:none}
+.gc.ev{background:var(--ok)} .gc.pa{background:var(--warn)} .gc.no{background:var(--bad)}
+.lvlpill{font-size:11px; font-weight:600; border-radius:999px; padding:3px 9px; white-space:nowrap}
+.lvlpill.l0{background:var(--line-2); color:var(--muted)}
+.lvlpill.l1{background:var(--staff-bg); color:var(--staff-d)}
+.lvlpill.l2{background:var(--hr-bg); color:var(--hr-d)}
+.lvlpill.l3{background:var(--ceo-bg); color:var(--ceo-d)}
+.split{display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--line); border-radius:var(--r-sm); overflow:hidden}
+@media(max-width:880px){.split{grid-template-columns:1fr}}
+.split>div{padding:15px 17px} .split>div+div{border-left:1px solid var(--line)}
+@media(max-width:880px){.split>div+div{border-left:none; border-top:1px solid var(--line)}}
+.split .h{font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:8px; margin-bottom:8px}
+/* meter */
+.meter{height:9px; border-radius:999px; background:var(--line-2); overflow:hidden; margin:6px 0}
+.meter i{display:block; height:100%; border-radius:999px; background:var(--brand)}
+.meter i.warn{background:var(--warn)} .meter i.bad{background:var(--bad)} .meter i.ok{background:var(--ok)}
+/* build packet */
+.packet{border:1px dashed var(--brand); border-radius:var(--r-sm); background:var(--surface-2); margin-bottom:14px; overflow:hidden}
+.packet .pkh{display:flex; align-items:center; gap:10px; padding:11px 15px; background:var(--brand-bg); border-bottom:1px dashed #C9CDE2; flex-wrap:wrap}
+.packet .ptag{font-family:var(--mono); font-size:11px; font-weight:600; color:#fff; background:var(--brand-deep); border-radius:6px; padding:3px 9px}
+.packet .pkh .pn{font-weight:600; font-size:13.5px}
+.packet .pkh .pm{font-size:11.5px; color:var(--brand-deep); margin-left:auto; font-family:var(--mono)}
+.packet .pkb{padding:4px 15px 15px}
+.packet pre{font-family:var(--mono); font-size:11.8px; line-height:1.62; color:var(--ink-2); background:var(--surface); border:1px solid var(--line-2); border-radius:8px; padding:12px 14px; overflow-x:auto; margin:11px 0 0; white-space:pre}
+.packet .lab{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:600; margin-top:13px}
+.route{font-family:var(--mono); font-size:12px; color:var(--sys-d); background:var(--sys-bg); border-radius:6px; padding:2px 8px; white-space:nowrap}
+.ptr{font-size:12px; color:var(--brand-deep); font-family:var(--mono); margin-top:11px}
+.ptr a{color:var(--brand-deep); text-decoration:none; border-bottom:1px dotted var(--brand)}
+.card.dash{border-style:dashed; background:var(--surface-2)}
+.tag2{display:inline-block; font-family:var(--mono); font-size:10.5px; color:var(--brand-deep); background:var(--brand-bg); border-radius:6px; padding:2px 7px; margin-left:2px; vertical-align:1px}
+/* feature toggle */
+.sw{display:inline-block; width:30px; height:17px; border-radius:999px; position:relative; background:var(--ok); vertical-align:-3px; flex:none}
+.sw.off{background:var(--muted-2)}
+.sw::after{content:""; position:absolute; top:2px; right:2px; width:13px; height:13px; border-radius:50%; background:#fff; box-shadow:var(--sh-sm)}
+.sw.off::after{right:auto; left:2px}
+/* flowchart */
+.fcgrid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+@media(max-width:880px){.fcgrid{grid-template-columns:1fr}}
+.fccard{background:var(--surface); border:1px solid var(--line); border-radius:var(--r-sm); padding:16px 16px 18px; box-shadow:var(--sh-sm)}
+.fccard h4{font-size:13px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px}
+.fccard h4 .pin{width:8px; height:8px; border-radius:50%; flex:none}
+.fc{display:flex; flex-direction:column; align-items:center; gap:0}
+.fc .n{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:7px 12px; font-size:11.5px; text-align:center; max-width:280px; box-shadow:var(--sh-sm); line-height:1.4}
+.fc .n.start{background:var(--brand-bg); border-color:#C9CDE2; font-weight:600}
+.fc .n.dec{background:var(--warn-bg); border-color:#E6D3B0; font-weight:600}
+.fc .n.end{background:var(--ok-bg); border-color:#BFD6C2; border-radius:999px; color:var(--ok-text); font-weight:600}
+.fc .n.bad{background:var(--bad-bg); border-color:#E4C4BD; border-radius:999px; color:var(--bad-text); font-weight:600}
+.fc .ar{color:var(--muted-2); font-size:14px; line-height:1; padding:3px 0}
+.fc .br{display:flex; gap:14px; align-items:flex-start; justify-content:center; width:100%}
+.fc .br .lane{display:flex; flex-direction:column; align-items:center; flex:1 1 0; min-width:0}
+.fc .lbl{font-size:10px; font-weight:700; border-radius:999px; padding:1px 8px; margin:2px 0}
+.fc .lbl.y{background:var(--ok-bg); color:var(--ok-text)} .fc .lbl.n{background:var(--bad-bg); color:var(--bad-text)} .fc .lbl.lp{background:var(--brand-bg); color:var(--brand-deep)}
+@media print{.topnav{position:static} body{background:#fff}}
+</style>
+</head>
+<body>
+
+<div class="topnav"><div class="wrap">
+  <div class="brand">Adeptio<span class="v">v2.4.1.SmbOwner</span></div>
+  <nav>
+    <a href="#s1">§1 Personas</a>
+    <a href="#s2">§2 Multi-tenant</a>
+    <a href="#s3">§3 Staff Portal</a>
+    <a href="#s4">§4 Owner console</a>
+    <a href="#s4p">§4P Platform admin</a>
+    <a href="#s5">§5 Payroll</a>
+    <a href="#s6">§6 Accounting</a>
+    <a href="#s7">§7 LINE·WhatsApp</a>
+    <a href="#s8">§8 Logs·Reports</a>
+    <a href="#s9">§9 Free tier·Moat</a>
+    <a href="#s10">§10 Data model</a>
+    <a href="#s11">§11 Decisions</a>
+    <a href="#sw">§W Feature wave</a>
+    <a href="#sf">§F Enable/disable</a>
+    <a href="#sa">§A Approval flows</a>
+    <a href="#sd">§D Tenant &amp; DB</a>
+    <a href="#si">§I Integrity</a>
+    <a href="#ss">§S Build state</a>
+    <a href="#sb">§B Build plan</a>
+  </nav>
+</div></div>
+
+<header class="hero"><div class="wrap">
+  <span class="kicker">● Branch blueprint · Owner Edition · scaffold plan</span>
+  <h1>One backend, <b>two people per shop</b>, one operator above them all.<br>Adeptio for the <b>owner who is also the manager, the HR, and the bookkeeper</b>.</h1>
+  <p class="lede">v2.4.1.SmbOwner takes the built v2.4.1 platform — its Atelier Pastel design, edge identity, offline-first sync and custody seals — and re-shapes it for the Lao small business: a <b>multi-tenant</b> service where an owner registers with <b>ID-card + selfie KYC</b> and is <b>manually activated</b>, then runs the whole company across <b>three personas</b> — <b>Staff</b> and <b>Owner</b> inside each shop, under a cross-tenant <b>Platform Administrator</b> who approves tenants and allocates resources. It pays staff <b>correctly under Lao social-security and tax law</b>, keeps the books without a separate spreadsheet, and reaches workers on <b>LINE and WhatsApp</b>. This is the structure blueprint and the buildable scaffold plan — it does not change the medium-enterprise line; it forks beside it.</p>
+  <div class="heromarks">
+    <span><b>Branch:</b> v2.4.1.SmbOwner</span>
+    <span><b>Tenancy:</b> shared DB · tenant_id</span>
+    <span><b>Personas:</b> 3 — Staff · Owner · Platform</span>
+    <span><b>Seats/tenant:</b> 10 staff · 3 mgr · 1 admin = 14</span>
+    <span><b>Onboarding:</b> ID + selfie KYC · manual activate</span>
+    <span><b>Clock-in:</b> geofence · 30 m default</span>
+    <span><b>Payroll:</b> Lao NSSF 6%+5.5% · PIT 0–25%</span>
+    <span><b>Tax:</b> full pack · owner-leveled</span>
+    <span><b>Channels:</b> in-app · email · LINE · WhatsApp</span>
+    <span><b>Feature wave:</b> +10 committed (§W)</span>
+    <span><b>Build:</b> demo shell live · smoke green (§S)</span>
+    <span><b>Design:</b> Atelier Pastel (no drift)</span>
+  </div>
+</div></header>
+
+<main class="wrap">
+
+<!-- ================= §1 TWO PERSONAS ================= -->
+<section id="s1">
+  <div class="sechead"><span class="secno">§1</span><h2>Three personas — the shop's two, and the operator above them</h2></div>
+  <p class="secsub">The medium-enterprise line splits work across five roles. A Lao SME is run by <b>one person</b> who is owner, manager, HR and bookkeeper at once — so <i>inside the shop</i> this branch collapses to two: a focused <b>Staff Portal</b> and a single <b>Owner console</b>. Above every shop sits a third persona — the <b>Platform Administrator</b> (you, the operator) — who approves registrations, watches each tenant's resources, and allocates capacity. Two personas serve the tenant; the third runs the platform.</p>
+
+  <div class="branch">
+    <div class="b"><h4>v2.4.1 <span class="badge plain">parent</span></h4><p>The built baseline — edge identity, 11 split stores, offline-first sync, custody flip, tier flags. Single company.</p></div>
+    <div class="b"><h4>.edge.auth <span class="badge hr">built</span></h4><p>LDAP/RADIUS pass-through, provisioning, server-authoritative identity. Carried forward unchanged.</p></div>
+    <div class="b"><h4>.sysmatik <span class="badge mgr">built</span></h4><p>Live check-in, device registry, punch-policy engine, vendor remote-ops. Optional add-on here.</p></div>
+    <div class="b cur"><h4>.SmbOwner <span class="badge brand">this</span></h4><p>Multi-tenant SaaS · 2 personas · free tier · split payroll + accounting · LINE/WhatsApp. Forks beside; does not replace.</p></div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="grid cols-3">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--staff)"></span>Persona 1 · Staff <span class="badge staff">ochre</span></h3>
+      <p class="small muted" style="margin-bottom:10px">The worker. Mobile-first PWA, deskless-friendly. Sees only their own record.</p>
+      <ul class="tick">
+        <li>Clock in / out — selfie + GPS + timestamp, <b>never-block</b>, offline queue</li>
+        <li>My attendance, my leave requests &amp; balance</li>
+        <li>My payslips — net pay, PIT &amp; social-security breakdown, YTD</li>
+        <li>My profile, documents, sign-in method &amp; security</li>
+        <li>Inbox — announcements &amp; alerts (in-app · LINE · WhatsApp)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--ceo)"></span>Persona 2 · Owner <span class="badge ceo">plum</span></h3>
+      <p class="small muted" style="margin-bottom:10px">One account, the union of <b>Owner + Manager + HR</b> scopes. Web-primary, mobile-capable. The four management surfaces you asked for:</p>
+      <ul class="tick">
+        <li><b>2.1 Staff Manager</b> — people, attendance, leave, scheduling, content &amp; messaging</li>
+        <li><b>2.2 Accounting</b> — revenue/expense, tax, monthly cost-benefit, xls export</li>
+        <li><b>2.3 System Management</b> — functions, integrations, users, data &amp; logs</li>
+        <li><b>2.4 Capacity &amp; Licenses</b> — plan, seats, message quotas, add-on metering</li>
+      </ul>
+      <p class="small" style="margin-top:10px"><span class="badge brand">bridge</span> <b>Payroll</b> sits between 2.1 and 2.2. <span class="badge plain">seats</span> 1 Owner/Sys-Admin + up to <b>3 Managers</b> (delegated, manager scope) + <b>10 Staff</b> = <b>14</b>/tenant.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--sys)"></span>Persona 3 · Platform Admin <span class="badge sys">teal</span></h3>
+      <p class="small muted" style="margin-bottom:10px">The operator (you). Lives <b>above</b> tenants — not inside any shop. The control plane:</p>
+      <ul class="tick">
+        <li><b>Registrations</b> — review ID+selfie KYC, activate / reject</li>
+        <li><b>Tenant resources</b> — seats, messages, storage, DB per shop</li>
+        <li><b>Allocate</b> — raise caps, grant add-ons, set plan</li>
+        <li><b>Platform ops</b> — DB, backups, suspend, break-glass</li>
+      </ul>
+      <p class="small" style="margin-top:10px"><span class="badge warn">boundary</span> Sees resources &amp; lifecycle, <b>not</b> salary figures or staff PII — those stay sealed. Full detail in §4P.</p>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot"></span>Scope model — two shells, one union account</h3>
+    <p class="small muted" style="margin-bottom:12px">The five sealed cells of the parent (R1–R6) are not deleted — they are <b>re-bundled</b>. The Owner persona is granted the union of the manager + hr + ceo + sysadmin scopes; Staff keeps the staff scope. No new permission engine, just a new role map — so the parent's audit and custody rules carry over intact.</p>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Persona / role</th><th>Seats</th><th>= parent scopes</th><th>Lands on</th><th>Cannot</th></tr></thead>
+      <tbody>
+        <tr><td class="fn">Staff</td><td class="num">≤10</td><td>staff</td><td>Staff Portal (§3)</td><td>see other people, money, or settings</td></tr>
+        <tr><td class="fn">Manager <span class="badge mgr" style="font-size:9px">delegated</span></td><td class="num">≤3</td><td>manager</td><td>Owner console — subset</td><td>accounting · licenses · platform plane</td></tr>
+        <tr><td class="fn">Owner / Sys-Admin</td><td class="num">×1</td><td>manager + hr + ceo + sysadmin</td><td>Owner console — full (§4)</td><td>reach across other tenants</td></tr>
+        <tr><td class="fn">Platform Admin <span class="badge sys" style="font-size:9px">operator</span></td><td class="num">n/a</td><td>platform_admin <span class="small muted">(cross-tenant, tenant_id = null)</span></td><td>Platform console (§4P)</td><td>read tenant <b>salary / PII content</b> (sealed)</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note" style="margin-top:14px"><b>Why this maps cleanly.</b> Tenant roles are the parent's scope flags re-bundled — Owner holds the union, Managers a subset; no new permission engine. The <b>Platform Admin is a different plane</b>: its account carries <span class="mono">tenant_id = null</span> and the data guard <i>inverts</i> for it (see across tenants, but only metadata/resources — never sealed money or PII). A tenant that outgrows the 14-seat shell upgrades to the 5-persona enterprise line with no data migration — same stores, same tenant_id.</div>
+  </div>
+</section>
+
+<!-- ================= §2 MULTI-TENANT ================= -->
+<section id="s2">
+  <div class="sechead"><span class="secno">§2</span><h2>Multi-tenant on the free tier — shared database, tenant-scoped rows</h2></div>
+  <p class="secsub">Many companies, one deployment, near-zero marginal cost. Every operational row carries a <span class="mono">tenant_id</span>; a new tenant registry holds each company's profile, plan and quotas; the edge Worker stamps and enforces the tenant on every query. Sensitive stores stay custody-sealed exactly as in the parent.</p>
+
+  <div class="grid cols-3">
+    <div class="card"><h3><span class="dot"></span>Topology</h3>
+      <ul class="tick">
+        <li><b>Static</b> — GitHub repo → Pages (the SPA, free)</li>
+        <li><b>API</b> — one Cloudflare Worker, free tier, deploy-on-push</li>
+        <li><b>Data</b> — one Turso DB, shared schema, all tenants</li>
+        <li><b>Sealed</b> — identity server-authoritative (edge.auth custody flip)</li>
+      </ul>
+      <p class="small muted" style="margin-top:8px">Shared-schema is the cheapest topology: it packs the most companies into a single free database, where DB-per-tenant would exhaust the free DB count quickly.</p>
+    </div>
+    <div class="card"><h3><span class="dot"></span>The tenant stamp</h3>
+      <p class="small">Sign-in resolves <span class="mono">account → tenant_id</span>. The Worker injects it into the session and into <b>every</b> read/write; a row-level guard rejects any query missing or crossing a tenant. The browser never chooses its own tenant_id.</p>
+      <div class="envelope" style="margin-top:10px"><span class="mono">session = { uid, tenant_id, scopes }</span><br><span class="mono">WHERE tenant_id = :session.tenant_id</span> — appended by the data layer, not the caller</div>
+    </div>
+    <div class="card"><h3><span class="dot"></span>Isolation &amp; the trade-off</h3>
+      <ul class="tick">
+        <li>Row-level scoping on all ops stores</li>
+        <li>Per-tenant backup, export &amp; <b>hard delete</b> (purge by tenant_id)</li>
+        <li>Sensitive stores (identity · payroll · ledger · tax) sealed + tenant-scoped</li>
+      </ul>
+      <p class="small" style="margin-top:8px"><span class="badge warn">watch</span> Shared DB = shared blast radius &amp; noisy-neighbour risk. Mitigation: query guard tested on every path, per-tenant rate &amp; quota caps (§7/§2.4), and an upgrade path to isolated DB for a paying tenant that needs it.</p>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot"></span>Tenant onboarding — KYC register, then manual activation</h3>
+    <p class="small muted" style="margin-bottom:10px">Not instant self-serve: an owner proves who they are, and a <b>Platform Administrator</b> (§4P) activates the tenant by hand. This keeps fake/abusive tenants off the shared free database — the gate that lets "free" stay safe.</p>
+    <div class="flow" style="margin-top:6px">
+      <div class="st"><h4>Register</h4><p>Company name, <b>email</b>, <b>phone</b>, language — plus an <b>ID-card photo</b> and an <b>owner selfie/screen-capture</b> to match the ID.</p></div>
+      <div class="st"><h4>Pending</h4><p>Tenant created <span class="mono">status=pending</span>; KYC images sealed in <span class="mono">db_registration</span>. Nothing operational yet.</p></div>
+      <div class="st"><h4>Platform review</h4><p>Platform Admin compares selfie ↔ ID, confirms email/phone → <b>Activate</b> or <b>Reject</b> (reason logged).</p></div>
+      <div class="st"><h4>Provision</h4><p>On activate: <span class="mono">status=active</span>, owner account (server-auth), free plan + <b>seats 10/3/1</b>, Lao tax/leave defaults seeded.</p></div>
+      <div class="st"><h4>Live</h4><p>Owner signs in, adds managers &amp; staff; clock-in works offline day one.</p></div>
+    </div>
+    <div class="note warn" style="margin-top:14px"><b>KYC data is sensitive.</b> ID-card and selfie images live in a sealed, tenant-scoped store (<span class="mono">db_registration</span>), encrypted at rest, access logged as <span class="mono">export.*</span>/<span class="mono">kyc.*</span> facts, with a retention rule. Only the Platform Admin reviewing the application can view them — and that view is audited.</div>
+  </div>
+</section>
+
+<!-- ================= §3 STAFF PORTAL ================= -->
+<section id="s3">
+  <div class="sechead"><span class="secno">§3</span><h2>Persona 1 · Staff Portal <span class="badge staff" style="font-size:12px">ochre</span></h2></div>
+  <p class="secsub">Built for the phone in a worker's pocket. A PWA — no app store — that installs to the home screen, captures a punch even with no signal, and shows the one thing a worker actually wants to check: <i>did my pay land, and is it right?</i></p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--staff)"></span>Web menu</h3>
+      <div class="tree"><b>Staff Portal</b>  <span class="c">(web)</span>
+├ <b>Today</b>          <span class="c">next shift · punch state · notices</span>
+├ <b>Clock</b>          <span class="c">in / out · selfie+GPS+time · offline queue</span>
+├ <b>Attendance</b>     <span class="c">history · grade · fix-request</span>
+├ <b>Leave</b>          <span class="c">request · balance · status</span>
+├ <b>Schedule</b>       <span class="c">my shifts · swap · pick open shift</span>
+├ <b>Pay</b>            <span class="c">payslips · earned-to-date · advance (EWA) · YTD · PDF</span>
+├ <b>Documents</b>      <span class="c">contract · ID · acknowledgements</span>
+├ <b>Inbox</b>          <span class="c">announcements · alerts (in-app/LINE/WA)</span>
+└ <b>Me</b>             <span class="c">profile · sign-in method · security</span></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--staff)"></span>Mobile (384px) — tab bar</h3>
+      <div class="tree"><b>Staff PWA</b>  <span class="c">(home-screen install)</span>
+
+  ┌─────────────────────────────┐
+  │   ☀ Today        🔔 3        │
+  │   ───────────────────────   │
+  │   [ ◉  CLOCK IN ]  big       │
+  │   last: out 18:02 ✓ synced   │
+  │   next: Mon 09:00            │
+  └─────────────────────────────┘
+   ⌂ Today  ⏱ Clock  🗓 Leave  ₭ Pay  ☰ More
+
+<span class="c">More → Attendance · Documents · Inbox · Me</span></div>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card dash">
+    <h3><span class="dot" style="background:var(--staff)"></span>Carried from research — the punch is sacred</h3>
+    <div class="grid cols-3">
+      <div><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">Never-block</div><p class="small muted">A punch never fails on patchy 3G — it queues locally and syncs; the server stamps the authoritative time on arrival.</p></div>
+      <div><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">Photo, not biometric</div><p class="small muted">Selfie stored as a human-reviewed photo by default (no face template) — stays below the ASEAN biometric-consent bar.</p></div>
+      <div><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">Fair by design</div><p class="small muted">A GPS/selfie flag routes to the owner's review queue — it never auto-docks pay. Anti-fraud as deterrent, not punishment.</p></div>
+    </div>
+    <p class="small muted" style="margin-top:10px">Optional <span class="mono">.sysmatik</span> add-on fuses terminal (ZKTeco/Hikvision) + kiosk + this mobile punch into one ledger. See the Live Check-in brief and v2.4.1.sysmatik.2.</p>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot" style="background:var(--mgr)"></span>Geofenced clock-in — the manager draws the circle</h3>
+    <p class="small muted" style="margin-bottom:12px">A Manager (or Owner) sets a <b>location pin + radius</b> per worksite; the punch checks the photo's GPS against it. The radius is adjustable, <b>default 30 m</b>. True to the never-block rule, a punch outside the circle is <i>flagged, not refused</i>.</p>
+    <div class="grid cols-2">
+      <div>
+        <div class="panel" style="border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2);overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--surface);border-bottom:1px solid var(--line);font-size:12.5px;font-weight:600">Site geofence <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--mgr-d);background:var(--mgr-bg);border-radius:6px;padding:3px 9px;font-weight:500">manager-set</span></div>
+          <div style="padding:13px 14px;border-bottom:1px solid var(--line-2);font-size:13px"><b>Pin</b> <span class="mono small">17.9757, 102.6331</span> <span class="muted small">— tap map to move</span></div>
+          <div style="padding:13px 14px;font-size:13px">
+            <div style="display:flex;justify-content:space-between"><span><b>Radius</b></span><span class="mono">30 m</span></div>
+            <div class="meter"><i style="width:18%"></i></div>
+            <div class="small muted">drag 10 m ——●———————————— 500 m · default 30 m</div>
+          </div>
+        </div>
+        <p class="small muted" style="margin-top:8px">Stored per site in <span class="mono">db_tenant.sites[]</span> <span class="small">{name, lat, lng, radius_m: 30}</span> — or in <span class="mono">db_punch_policy</span> when the sysmatik add-on is on.</p>
+      </div>
+      <div>
+        <div class="lab" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:6px">On each punch</div>
+        <ul class="tick">
+          <li><b>Read GPS</b> from the selfie (EXIF) + the device fix; use the better-accuracy reading</li>
+          <li><b>Compare</b> distance(pin, fix) to radius</li>
+          <li><span class="badge ok">inside</span> → punch is evidence-grade ✓</li>
+          <li><span class="badge warn">outside / weak GPS</span> → punch still saved, marked <b>flag</b> (record-only)</li>
+          <li>Flags land in the <b>review queue</b> — owner/manager accepts or asks for a correction</li>
+        </ul>
+        <div class="note" style="margin-top:10px"><b>Never blocks.</b> The circle decides the <i>grade</i> of a punch, never whether it's allowed — a worker with no signal or just outside the line is never locked out of clocking in.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= §4 OWNER CONSOLE ================= -->
+<section id="s4">
+  <div class="sechead"><span class="secno">§4</span><h2>Persona 2 · Owner console <span class="badge ceo" style="font-size:12px">plum</span></h2></div>
+  <p class="secsub">One cockpit. The owner lands on a dashboard that answers four questions at a glance — <i>who's in, what's owed, what's the cash, what's running out</i> — then drills into the four management surfaces (2.1–2.4) plus the Payroll bridge.</p>
+
+  <div class="card">
+    <h3><span class="dot" style="background:var(--ceo)"></span>Owner dashboard — the cockpit</h3>
+    <div class="grid cols-3" style="margin-top:4px">
+      <div class="card" style="box-shadow:none;padding:15px"><div class="small muted">Today · attendance</div><div style="font-size:22px;font-weight:600;margin-top:3px">18 / 21 <span class="small muted" style="font-weight:400">in</span></div><div class="small"><span class="badge warn">2 flags</span> <span class="badge plain">1 leave</span></div></div>
+      <div class="card" style="box-shadow:none;padding:15px"><div class="small muted">Payroll · this month</div><div style="font-size:22px;font-weight:600;margin-top:3px">₭ 58.4M <span class="small muted" style="font-weight:400">due</span></div><div class="small"><span class="badge plain">run draft</span> <span class="badge brand">PIT ₭4.1M</span></div></div>
+      <div class="card" style="box-shadow:none;padding:15px"><div class="small muted">Cash · month-to-date</div><div style="font-size:22px;font-weight:600;margin-top:3px">+₭ 12.7M</div><div class="small"><span class="badge ok">rev 91M</span> <span class="badge bad">exp 78M</span></div></div>
+    </div>
+    <p class="small muted" style="margin-top:12px">Plus capacity strips (§2.4): seats used, LINE/WhatsApp messages left this cycle, storage. Tiles are tenant-scoped and respect the payroll/accounting <b>leveling</b> the owner chose.</p>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot" style="background:var(--ceo)"></span>Owner — full web menu (the four surfaces)</h3>
+    <div class="tree"><b>Owner console</b>  <span class="c">(web)</span>
+├ <b>Dashboard</b>                 <span class="c">cockpit · alerts · capacity strips</span>
+│
+├ <b>2.1 Staff Manager</b>
+│   ├ People               <span class="c">profiles · contracts · comp profile · onboarding</span>
+│   ├ Attendance           <span class="c">live board · review queue · corrections · OT</span>
+│   ├ Scheduling           <span class="c">roster · templates · swap/open-shift approvals · Lao holidays</span>
+│   ├ Leave                <span class="c">approvals · balances · leave types · accrual</span>
+│   ├ Messaging &amp; content   <span class="c">announcements · templates · LINE/WA broadcast · inbox</span>
+│   └ Access &amp; invites      <span class="c">logins · roles · activation · offboard</span>
+│
+├ <b>Payroll</b>  <span class="c">★ bridge 2.1↔2.2 — §5</span>
+│   ├ Pay runs            <span class="c">draft→review→approve→pay→file→close · one-tap run</span>
+│   ├ Components          <span class="c">earnings · allowances · OT · deductions</span>
+│   ├ Advances (EWA)      <span class="c">earned-to-date · owner-approved draw · payday recovery</span>
+│   ├ Statutory           <span class="c">NSSF schedule · PIT withholding report</span>
+│   ├ Payslips            <span class="c">bilingual EN/ລາວ · "why this number" · bulk PDF · notify</span>
+│   └ Leveling            <span class="c">L0 cash → L3 full compliance (owner switch)</span>
+│
+├ <b>2.2 Accounting</b>  <span class="c">§6</span>
+│   ├ Cashbook            <span class="c">revenue / expense · day · week · month</span>
+│   ├ Monthly close       <span class="c">expense input · accruals · staff-cost pull</span>
+│   ├ Tax centre          <span class="c">VAT · profit/CIT · PIT+NSSF · calendar · due-date nudges</span>
+│   ├ Cost &amp; benefit       <span class="c">live labour-cost vs revenue · P&amp;L-lite · margin · cost/head</span>
+│   └ Reports &amp; export     <span class="c">to .xlsx / .pdf — one-shot, no outside sheet</span>
+│
+├ <b>2.3 System Management</b>
+│   ├ Company             <span class="c">tenant profile · entity type · LAK · locales</span>
+│   ├ Functions           <span class="c">feature flags — turn modules on/off</span>
+│   ├ Integrations        <span class="c">LINE · WhatsApp · Sysmatik devices · directory · email</span>
+│   ├ Users &amp; roles        <span class="c">scope map · break-glass · sessions</span>
+│   ├ Data studio         <span class="c">stores · backup/restore · per-tenant export · purge</span>
+│   └ Audit &amp; logs         <span class="c">append-only facts · sign-ins · exports · changes</span>
+│
+└ <b>2.4 Capacity &amp; Licenses</b>
+    ├ Plan &amp; tier          <span class="c">free / paid · what's included · upgrade</span>
+    ├ Seats               <span class="c">active staff vs limit · meter</span>
+    ├ Message quotas      <span class="c">LINE · WhatsApp — used / left · top-up</span>
+    ├ Storage &amp; add-ons     <span class="c">docs · devices · channels — metered</span>
+    └ Billing             <span class="c">usage statement · invoices (future charges)</span></div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot" style="background:var(--ceo)"></span>Owner — mobile (384px) — the on-the-floor subset</h3>
+    <div class="grid cols-2">
+      <div>
+        <div class="tree"><b>Owner PWA</b>
+
+  ┌─────────────────────────────┐
+  │  Phoungern Co.   ▾   🔔 5    │
+  │  ──────────────────────────  │
+  │  In 18/21 · Flags 2          │
+  │  Cash +₭12.7M · Pay due 58M  │
+  │  LINE 240/300 ▓▓▓▓▓▓▓░       │
+  └─────────────────────────────┘
+   ⌂ Home  👤 Staff  ₭ Pay  📒 Books  ☰</div>
+      </div>
+      <div>
+        <p class="small muted" style="margin-bottom:8px">Mobile keeps the high-frequency owner actions; deep config (Data studio, Integrations, Billing) is "open on web". The phone is for:</p>
+        <ul class="tick">
+          <li>Approve leave / clear an attendance flag</li>
+          <li>Approve a pay run (read the totals, tap approve)</li>
+          <li>Add a cash sale or an expense on the spot</li>
+          <li>Broadcast a LINE/WhatsApp notice to staff</li>
+          <li>Glance at capacity before it runs out</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note" style="margin-top:14px">Same <b>container-query</b> layout as the parent: the identical <span class="mono">.grid</span> is 4-up on the desktop console and 2-up inside the 384px frame because it measures its container, not the viewport. No separate mobile codebase.</div>
+  </div>
+</section>
+
+<!-- ================= §4P PLATFORM ADMIN ================= -->
+<section id="s4p">
+  <div class="sechead"><span class="secno">§4P</span><h2>Persona 3 · Platform Administrator <span class="badge sys" style="font-size:12px">teal · operator</span></h2></div>
+  <p class="secsub">The landlord above all shops. Where Staff and Owner live <i>inside</i> a tenant, the Platform Admin lives <i>across</i> tenants — the account carries <span class="mono">tenant_id = null</span> and the data guard inverts: it sees every tenant, but only their <b>resources and lifecycle</b>, never their sealed money or staff PII. This is the console that keeps a free, shared platform safe and allocatable.</p>
+
+  <div class="card">
+    <h3><span class="dot" style="background:var(--sys)"></span>Platform console — web menu</h3>
+    <div class="tree"><b>Platform console</b>  <span class="c">(operator · cross-tenant)</span>
+├ <b>Overview</b>            <span class="c">tenants live · pending KYC · platform load · alerts</span>
+├ <b>Registrations</b>       <span class="c">★ KYC queue — review ID↔selfie · activate / reject</span>
+├ <b>Tenants</b>            <span class="c">registry · search · profile · suspend / reactivate / terminate</span>
+├ <b>Resources</b>          <span class="c">per-tenant: seats · messages · storage · DB rows · activity</span>
+├ <b>Allocation</b>         <span class="c">set caps · grant add-ons · change plan/tier · top-up quotas</span>
+├ <b>Database &amp; ops</b>      <span class="c">backups · restore · migrations · per-tenant export · purge</span>
+├ <b>Billing &amp; licensing</b> <span class="c">usage statements · invoices · metered-channel revenue</span>
+├ <b>Security &amp; audit</b>     <span class="c">cross-tenant sign-ins · exports · anomalies · break-glass log</span>
+└ <b>Platform users</b>      <span class="c">operator accounts &amp; roles (admin · support · billing)</span></div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot" style="background:var(--sys)"></span>Per-tenant resource dashboard — see &amp; allocate</h3>
+    <p class="small muted" style="margin-bottom:12px">One row per shop, live meters, allocate in place. The numbers are metadata (counts &amp; usage) — never the content behind them.</p>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Tenant</th><th>Plan</th><th>Seats (S/M/A)</th><th>Messages</th><th>Storage</th><th>Status</th><th>Allocate</th></tr></thead>
+      <tbody>
+        <tr><td class="fn">Phoungern Co.</td><td><span class="badge plain">Free</span></td><td class="mono">10/3/1 <span class="muted">full</span></td><td><div class="meter" style="width:90px"><i class="warn" style="width:80%"></i></div><span class="small mono">240/300</span></td><td><span class="small mono">0.4 GB</span></td><td><span class="badge ok">active</span></td><td><span class="badge brand">+ seats · + msg</span></td></tr>
+        <tr><td class="fn">Vientiane Mart</td><td><span class="badge plain">Free</span></td><td class="mono">7/1/1</td><td><div class="meter" style="width:90px"><i class="ok" style="width:35%"></i></div><span class="small mono">105/300</span></td><td><span class="small mono">0.2 GB</span></td><td><span class="badge ok">active</span></td><td><span class="badge brand">manage</span></td></tr>
+        <tr><td class="fn">Lao Coffee Lab</td><td><span class="badge plain">—</span></td><td class="mono">—</td><td class="mono">—</td><td class="mono">—</td><td><span class="badge warn">pending KYC</span></td><td><span class="badge sys">review</span></td></tr>
+      </tbody>
+    </table></div>
+    <p class="small muted" style="margin-top:8px">Backed by <span class="mono">db_tenant</span> + <span class="mono">db_license</span> (allocation) + <span class="mono">dw_reports</span> (usage rollups), all read cross-tenant on the platform plane.</p>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="grid cols-2">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--sys)"></span>KYC review queue</h3>
+      <div class="flow" style="margin-top:4px">
+        <div class="st"><h4>Open</h4><p>Pending tenant: ID-card image + owner selfie side by side.</p></div>
+        <div class="st"><h4>Match</h4><p>Confirm face ↔ ID; email + phone verified.</p></div>
+        <div class="st"><h4>Decide</h4><p>Activate → provision; or Reject with a reason.</p></div>
+        <div class="st"><h4>Log</h4><p>Decision + reviewer + time → audit <span class="mono">kyc.*</span>.</p></div>
+      </div>
+      <p class="small muted" style="margin-top:10px">Viewing the KYC images is itself an audited, time-boxed act — opened only for the application under review.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--sys)"></span>Controls — assigned, and bounded</h3>
+      <div class="split">
+        <div>
+          <div class="h"><span class="badge ok" style="font-size:9px">CAN</span> manage</div>
+          <ul class="tick" style="font-size:12.5px">
+            <li>Activate / reject / suspend / terminate tenants</li>
+            <li>Allocate seats, message quotas, storage, plan</li>
+            <li>Grant add-ons · top-up quotas</li>
+            <li>Backup · restore · export · purge · migrate</li>
+            <li>Break-glass owner-access reset (invite only)</li>
+            <li>Watch cross-tenant audit &amp; anomalies</li>
+          </ul>
+        </div>
+        <div>
+          <div class="h"><span class="badge bad" style="font-size:9px">CANNOT</span> see</div>
+          <ul class="tick x" style="font-size:12.5px">
+            <li>Salary amounts · payslips</li>
+            <li>Cashbook / ledger entries</li>
+            <li>Staff personal data content</li>
+            <li>Passwords / tokens (never stored plain)</li>
+            <li>KYC images outside an active review</li>
+          </ul>
+        </div>
+      </div>
+      <div class="note warn" style="margin-top:12px"><b>Privacy plane.</b> Mirrors the sysmatik vendor-console boundary: the operator runs the <i>plumbing</i>, not the <i>contents</i>. Any sealed-data access is break-glass — explicit, reason-required, and written to an append-only log the tenant can see.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= §5 PAYROLL ================= -->
+<section id="s5">
+  <div class="sechead"><span class="secno">§5</span><h2>Payroll — split into a Lao-correct pipeline</h2></div>
+  <p class="secsub">The heart of this branch. Most SME tools get payroll "roughly right" and leave the owner exposed at NSSF and Tax Department filing time. Adeptio computes it as a transparent, auditable pipeline where <b>every line is shown</b>, the statutory math follows current Lao law, and the owner picks how deep to go.</p>
+
+  <div class="card">
+    <h3><span class="dot"></span>The pipeline — five stages, two sides</h3>
+    <div class="flow" style="margin-top:6px">
+      <div class="st"><h4>① Inputs</h4><p>Comp profile (base + allowances), attendance &amp; OT, leave (unpaid), one-offs (bonus · advance · fine).</p></div>
+      <div class="st"><h4>② Gross</h4><p>base + allowances + OT (Lao multipliers) + bonus = gross earnings.</p></div>
+      <div class="st"><h4>③ Social security</h4><p>NSSF base = min(earnings, cap). Employee 5.5% deducted; employer 6% added to cost.</p></div>
+      <div class="st"><h4>④ PIT</h4><p>Taxable = gross − employee NSSF. Progressive 0–25% by monthly bracket.</p></div>
+      <div class="st"><h4>⑤ Net &amp; cost</h4><p>Net = gross − NSSF − PIT − other. Employer cost = gross + employer NSSF.</p></div>
+    </div>
+    <div class="note ok" style="margin-top:14px"><b>Two numbers, never confused:</b> what the worker <b>takes home</b> (net) and what the company <b>spends</b> (employer cost = gross + 6% NSSF). The second is what flows into Accounting as staff cost (§6) — the source of the cost/benefit linkage you asked for.</div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="grid cols-2">
+    <div class="card">
+      <h3><span class="dot"></span>Statutory reference <span class="badge brand" style="font-size:10px">Jun 2026</span></h3>
+      <div class="tblwrap"><table class="tbl">
+        <tbody>
+          <tr><td class="fn">NSSF / LSSO</td><td>Employer <b>6%</b> + Employee <b>5.5%</b> of earnings, capped at <b>₭4,500,000</b>/mo</td></tr>
+          <tr><td class="fn">PIT base</td><td>Gross taxable <b>minus</b> employee NSSF, then brackets below</td></tr>
+          <tr><td class="fn">Min wage</td><td><b>₭2,500,000</b>/mo (+₭900,000 subsistence, unskilled untrained)</td></tr>
+          <tr><td class="fn">Hours</td><td>8h/day · 48h/week · 6 days</td></tr>
+          <tr><td class="fn">Overtime</td><td>≤3h/day, ≤45h/mo · <b>150%</b> normal day · <b>250%/350%</b> rest-day &amp; night tiers</td></tr>
+          <tr><td class="fn">Sole trader</td><td>Profit Tax on revenue: <b>1%</b> production · <b>2%</b> commerce · <b>3%</b> services</td></tr>
+        </tbody>
+      </table></div>
+      <p class="small muted" style="margin-top:8px">Stored as <b>effective-dated, owner-editable tables</b> in <span class="mono">db_tax</span> — when a rate changes, add a new effective row; historical runs keep their old rates.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>PIT monthly brackets <span class="badge plain" style="font-size:10px">PwC, reviewed 06 Feb 2026</span></h3>
+      <div class="tblwrap"><table class="tbl">
+        <thead><tr><th>Monthly taxable (₭)</th><th class="num">Rate</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">0 – 1,300,000</td><td class="num">0%</td></tr>
+          <tr><td class="mono">1,300,001 – 5,000,000</td><td class="num">5%</td></tr>
+          <tr><td class="mono">5,000,001 – 15,000,000</td><td class="num">10%</td></tr>
+          <tr><td class="mono">15,000,001 – 25,000,000</td><td class="num">15%</td></tr>
+          <tr><td class="mono">25,000,001 – 65,000,000</td><td class="num">20%</td></tr>
+          <tr><td class="mono">65,000,001 +</td><td class="num">25%</td></tr>
+        </tbody>
+      </table></div>
+      <p class="small muted" style="margin-top:8px">Progressive (marginal) — each slice taxed at its own rate, exactly as the engine computes it below.</p>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot"></span>Worked example — one employee, every line shown <span class="badge ok" style="font-size:10px">math verified</span></h3>
+    <p class="small muted" style="margin-bottom:12px">Base salary <b>₭6,000,000</b>/month, no allowances, no OT. This is the payslip the engine produces and the journal it posts.</p>
+    <div class="grid cols-2">
+      <div>
+        <div class="lab" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:6px">Worker take-home</div>
+        <div class="tblwrap"><table class="tbl">
+          <tbody>
+            <tr><td>Gross earnings</td><td class="num">6,000,000</td></tr>
+            <tr><td>NSSF base = min(6,000,000, 4,500,000)</td><td class="num">4,500,000</td></tr>
+            <tr><td>− Employee NSSF (5.5%)</td><td class="num">−247,500</td></tr>
+            <tr><td>Taxable income</td><td class="num">5,752,500</td></tr>
+            <tr><td>&nbsp;&nbsp;PIT @5% (1.3M→5.0M = 3.70M)</td><td class="num">185,000</td></tr>
+            <tr><td>&nbsp;&nbsp;PIT @10% (5.0M→5.7525M = 0.7525M)</td><td class="num">75,250</td></tr>
+            <tr><td>− PIT total</td><td class="num">−260,250</td></tr>
+            <tr><td class="fn">Net pay</td><td class="num"><b>5,492,250</b></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div>
+        <div class="lab" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin-bottom:6px">Company cost &amp; what's owed</div>
+        <div class="tblwrap"><table class="tbl">
+          <tbody>
+            <tr><td>Gross earnings</td><td class="num">6,000,000</td></tr>
+            <tr><td>+ Employer NSSF (6%)</td><td class="num">+270,000</td></tr>
+            <tr><td class="fn">Employer total cost</td><td class="num"><b>6,270,000</b></td></tr>
+            <tr><td colspan="2" style="background:var(--surface-2)"></td></tr>
+            <tr><td>→ Pay to worker (net)</td><td class="num">5,492,250</td></tr>
+            <tr><td>→ Remit to NSSF (5.5%+6%)</td><td class="num">517,500</td></tr>
+            <tr><td>→ Remit PIT to Tax Dept</td><td class="num">260,250</td></tr>
+            <tr><td class="fn">Checks out</td><td class="num">6,270,000</td></tr>
+          </tbody>
+        </table></div>
+        <p class="small muted" style="margin-top:8px">5,492,250 + 517,500 + 260,250 = <b>6,270,000</b> — the engine reconciles every kip.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot"></span>Leveling — the owner picks the depth <span class="badge brand" style="font-size:10px">your call: full pack, selectable</span></h3>
+    <p class="small muted" style="margin-bottom:12px">One menu switch in Payroll → Leveling sets how far compliance goes. A market stall starts at L0; a registered company runs L3. Everything is built; the level just reveals/activates it. Raising a level never rewrites closed history.</p>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Level</th><th>What runs</th><th>For</th></tr></thead>
+      <tbody>
+        <tr><td><span class="lvlpill l0">L0 Cash</span></td><td>Net pay only · simple payslip · no statutory math</td><td>Informal / cash-only micro-shop</td></tr>
+        <tr><td><span class="lvlpill l1">L1 Basic</span></td><td>L0 + NSSF + PIT computed · proper bilingual payslip · YTD</td><td>Small team starting to formalise</td></tr>
+        <tr><td><span class="lvlpill l2">L2 Compliant</span></td><td>L1 + NSSF schedule + PIT withholding report + remittance tracking + tax calendar</td><td>Registered employer filing monthly</td></tr>
+        <tr><td><span class="lvlpill l3">L3 Full</span></td><td>L2 + benefit-in-kind handling · sole-trader Profit Tax / company CIT workpapers · audit-grade ledger · e-filing export</td><td>Owner who wants near-accountant output</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="grid cols-2">
+    <div class="card">
+      <h3><span class="dot"></span>Pay-run lifecycle — nothing changes silently</h3>
+      <div class="flow" style="margin-top:4px">
+        <div class="st"><h4>Draft</h4><p>Pull people, attendance, OT, one-offs.</p></div>
+        <div class="st"><h4>Review</h4><p>Per-person preview; exceptions flagged.</p></div>
+        <div class="st"><h4>Approve</h4><p>Owner signs off; totals locked.</p></div>
+        <div class="st"><h4>Pay</h4><p>Bank/transfer file + payslips out.</p></div>
+        <div class="st"><h4>File</h4><p>NSSF + PIT schedules generated.</p></div>
+        <div class="st"><h4>Close</h4><p>Immutable; posts to Accounting.</p></div>
+      </div>
+      <p class="small muted" style="margin-top:10px">A closed run is never edited — corrections go through an <b>adjustment run</b>, leaving a clean trail in <span class="mono">db_audit</span>.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>Outputs &amp; custody</h3>
+      <ul class="tick">
+        <li>Bilingual <b>EN/ລາວ</b> payslip (PDF, per worker)</li>
+        <li>Pay-run register (all workers, one sheet → xlsx)</li>
+        <li><b>NSSF contribution schedule</b> (employer filing)</li>
+        <li><b>PIT withholding report</b> (monthly, Tax Dept)</li>
+        <li>Bank transfer file · journal entry to §6</li>
+      </ul>
+      <div class="note warn" style="margin-top:12px"><b>Sealed like identity.</b> <span class="mono">db_payroll</span> is custody-grade &amp; tenant-scoped: amounts are server-authoritative, exports are logged as sensitive events, and salaries never ride the open browser sync. Same custody model as the parent's <span class="mono">db_identity</span>.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= §6 ACCOUNTING ================= -->
+<section id="s6">
+  <div class="sechead"><span class="secno">§6</span><h2>Accounting — the books live <i>inside</i> the system</h2></div>
+  <p class="secsub">No more keeping pay in one place and money in a spreadsheet. The owner records revenue and expenses by day, week or month right here; tax is computed from the same data; and because payroll already posts staff cost, the monthly cost/benefit picture builds itself. The spreadsheet becomes an <b>export</b>, never the source of truth.</p>
+
+  <div class="grid cols-3">
+    <div class="card"><h3><span class="dot"></span>Cashbook</h3>
+      <p class="small muted" style="margin-bottom:8px">One simple ledger of money in and out. Each entry:</p>
+      <ul class="tick">
+        <li>Date · type (revenue / expense)</li>
+        <li>Category · amount (₭) · note</li>
+        <li>Tax flag (VAT in/out · exempt)</li>
+        <li>Method (cash · transfer · QR)</li>
+        <li>Optional receipt photo</li>
+      </ul>
+      <p class="small muted" style="margin-top:8px">Views: <b>day</b> (cash drawer), <b>week</b> (trend), <b>month</b> (close).</p>
+    </div>
+    <div class="card"><h3><span class="dot"></span>Auto-fed lines</h3>
+      <p class="small muted" style="margin-bottom:8px">Some lines the owner never types — they flow from elsewhere:</p>
+      <ul class="tick">
+        <li><b>Salaries</b> ← each closed pay run (§5)</li>
+        <li><b>Employer NSSF</b> ← pay run (6%)</li>
+        <li><b>PIT / NSSF payable</b> ← statutory</li>
+        <li><b>Channel fees</b> ← LINE/WhatsApp metering (§7)</li>
+      </ul>
+      <p class="small muted" style="margin-top:8px">This wiring is what makes cost/benefit real instead of a guess.</p>
+    </div>
+    <div class="card"><h3><span class="dot"></span>One-shot, exportable</h3>
+      <ul class="tick">
+        <li>Enter once, in-app — system of record</li>
+        <li>Export any view to <b>.xlsx</b> (SheetJS) &amp; <b>.pdf</b></li>
+        <li>Round-trip CSV import for back-data</li>
+        <li>No external sheet required to operate</li>
+      </ul>
+      <div class="note" style="margin-top:10px"><b>Single-entry by design.</b> A cashbook, not double-entry bookkeeping — matched to an owner, not an accountant. L3 adds audit-grade workpapers for those who want them.</div>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot"></span>Tax centre — full pack, revealed by leveling</h3>
+    <p class="small muted" style="margin-bottom:12px">Everything Lao SME tax touches, in one place, switched on to match the company's entity type and chosen level. The owner files; Adeptio prepares.</p>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Tax</th><th>Basis</th><th class="num">Rate</th><th>Level</th></tr></thead>
+      <tbody>
+        <tr><td class="fn">PIT (withholding)</td><td>Employee salary, after NSSF — from payroll</td><td class="num">0–25%</td><td><span class="lvlpill l1">L1+</span></td></tr>
+        <tr><td class="fn">NSSF</td><td>Earnings to ₭4.5M cap — from payroll</td><td class="num">6% + 5.5%</td><td><span class="lvlpill l1">L1+</span></td></tr>
+        <tr><td class="fn">VAT</td><td>Output − input, if VAT-registered</td><td class="num">10%</td><td><span class="lvlpill l2">L2+</span></td></tr>
+        <tr><td class="fn">Profit Tax (sole trader)</td><td>Gross revenue · production/commerce/services</td><td class="num">1 / 2 / 3%</td><td><span class="lvlpill l3">L3</span></td></tr>
+        <tr><td class="fn">CIT (company)</td><td>Net profit, if incorporated</td><td class="num">20%</td><td><span class="lvlpill l3">L3</span></td></tr>
+        <tr><td class="fn">Dividend WHT</td><td>Distributions</td><td class="num">10%</td><td><span class="lvlpill l3">L3</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="grid cols-2" style="margin-top:14px">
+      <div class="note"><b>Entity switch.</b> System Management → Company sets <b>sole trader</b> (Profit Tax on revenue) or <b>company</b> (CIT on profit). The tax centre shows only what applies — no confusing the owner with the wrong regime.</div>
+      <div class="note ok"><b>Tax calendar.</b> Monthly PIT &amp; NSSF, periodic VAT, annual profit/CIT — each a dated checklist item with the figure pre-computed and a "mark filed" that lands in the audit log.</div>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot"></span>Monthly cost &amp; benefit — payroll meets the books</h3>
+    <p class="small muted" style="margin-bottom:12px">The deliverable you asked for: monthly expenses in, staff cost &amp; payroll linked, a clear cost/benefit read. Illustrative month for a 21-person shop:</p>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Line</th><th class="num">₭ (month)</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td class="fn" style="color:var(--ok-text)">Revenue</td><td class="num">91,000,000</td><td class="small muted">cashbook</td></tr>
+        <tr><td>− Staff cost (gross + employer NSSF)</td><td class="num">58,420,000</td><td class="small muted">auto ← payroll §5</td></tr>
+        <tr><td>− Rent · utilities · COGS · other</td><td class="num">17,300,000</td><td class="small muted">monthly expense input</td></tr>
+        <tr><td>− LINE / WhatsApp channel fees</td><td class="num">280,000</td><td class="small muted">auto ← metering §7</td></tr>
+        <tr><td class="fn">Operating result</td><td class="num"><b>+14,? </b></td><td class="small muted">= 15,000,000 − rounding</td></tr>
+        <tr><td>Margin</td><td class="num">~16%</td><td class="small muted">result ÷ revenue</td></tr>
+        <tr><td>Staff cost ÷ revenue</td><td class="num">64%</td><td class="small muted">labour intensity</td></tr>
+        <tr><td>Cost per head</td><td class="num">2,782,000</td><td class="small muted">staff cost ÷ 21</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small muted" style="margin-top:8px">Charts (hand-rolled SVG, same as parent): revenue vs staff-cost trend, margin over time, cost-per-head. All export to one workbook with a tab per report — the "one shot, no outside sheet" promise.</p>
+  </div>
+</section>
+
+<!-- ================= §7 LINE / WHATSAPP ================= -->
+<section id="s7">
+  <div class="sechead"><span class="secno">§7</span><h2>LINE &amp; WhatsApp — reach workers where they already are</h2></div>
+  <p class="secsub">Lao &amp; Thai workers live on LINE; cross-border and migrant staff on WhatsApp. Adeptio adds both as first-class channels alongside in-app and email — and because every outbound message on those two has a real provider cost, they double as the <b>free-tier monetization wedge</b> that funds the rest.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3><span class="dot"></span>Four channels, one comms cell</h3>
+      <p class="small muted" style="margin-bottom:10px">All route through <span class="mono">db_comms</span> (carried from the parent — it already logs auth mails). Channel is chosen per template, with fallback.</p>
+      <div class="tblwrap"><table class="tbl">
+        <thead><tr><th>Channel</th><th>Cost</th><th>Best for</th></tr></thead>
+        <tbody>
+          <tr><td class="fn">In-app</td><td><span class="badge ok">free</span></td><td>everything, when the app is open</td></tr>
+          <tr><td class="fn">Email</td><td><span class="badge ok">free</span></td><td>activation · payslip-ready · records</td></tr>
+          <tr><td class="fn">LINE</td><td><span class="badge warn">metered</span></td><td>shift &amp; punch nudges · payday · broadcasts</td></tr>
+          <tr><td class="fn">WhatsApp</td><td><span class="badge warn">metered</span></td><td>migrant/cross-border staff · OTP</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>What gets sent</h3>
+      <ul class="tick">
+        <li>Payslip ready · payday landed</li>
+        <li>Shift reminder · missing-punch nudge</li>
+        <li>Leave approved / declined</li>
+        <li>Activation &amp; OTP (security)</li>
+        <li>Owner broadcast / announcement</li>
+        <li>Capacity &amp; license alerts (to owner)</li>
+      </ul>
+      <p class="small muted" style="margin-top:8px">Every template ships <b>bilingual EN / ລາວ</b> — the Lao-first edge the incumbents skip.</p>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot"></span>Free tier &amp; metering — how the money works</h3>
+    <div class="grid cols-3" style="margin-top:4px">
+      <div><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">Free forever</div><p class="small muted">The whole platform — personas, attendance, payroll, accounting, in-app + email — runs on free infrastructure (Workers · Turso · Pages). A small shop pays nothing to operate.</p></div>
+      <div><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">Metered add-ons</div><p class="small muted">LINE &amp; WhatsApp messages carry a per-message provider cost, so each tenant gets a monthly allowance, then tops up or upgrades. The meter lives in <span class="mono">db_license</span>; usage shows in §2.4.</p></div>
+      <div><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">Honest billing</div><p class="small muted">Each send debits the tenant's quota and posts a fee line to Accounting (§6). The owner always sees what a channel costs before the bill — no surprise overage.</p></div>
+    </div>
+    <div class="envelope" style="margin-top:14px">
+      <b>Metering path:</b> <span class="mono">send(template, channel) → check db_license.quota[channel] → debit 1 → log db_comms → post fee db_ledger → if quota low: alert owner</span>
+    </div>
+    <div class="note warn" style="margin-top:12px"><b>Open decision (DS7).</b> The free-seat threshold and the LINE/WhatsApp per-message price (pass-through vs. small margin) are commercial calls, not technical ones — flagged in §11 for you to set. The plumbing meters whatever numbers you choose.</div>
+  </div>
+</section>
+
+<!-- ================= §8 LOGS & REPORTS ================= -->
+<section id="s8">
+  <div class="sechead"><span class="secno">§8</span><h2>Logging &amp; reporting — rechecked for money and multi-tenancy</h2></div>
+  <p class="secsub">Adding payroll, money and tenants raises the stakes on the audit trail. The parent's append-only <span class="mono">db_audit</span> and replay-based <span class="mono">dw_reports</span> carry over; this branch widens the fact set, makes every figure tenant-scoped, and treats <b>data export as a sensitive, logged act</b>.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3><span class="dot"></span>Audit — what now lands on the ledger</h3>
+      <div class="tblwrap"><table class="tbl">
+        <thead><tr><th>Fact family</th><th>Examples</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">tenant.*</td><td>created · plan changed · purged</td></tr>
+          <tr><td class="mono">auth.*</td><td>sign-in · lockout · invite · offboard <span class="badge plain" style="font-size:9px">parent</span></td></tr>
+          <tr><td class="mono">payroll.*</td><td>run drafted · approved · paid · filed · adjusted</td></tr>
+          <tr><td class="mono">ledger.*</td><td>entry added · edited · void</td></tr>
+          <tr><td class="mono">tax.*</td><td>table edited · period computed · marked filed</td></tr>
+          <tr><td class="mono">comms.*</td><td>sent · failed · quota debited</td></tr>
+          <tr><td class="mono">export.*</td><td><b>who exported what, when</b> — sensitive</td></tr>
+          <tr><td class="mono">license.*</td><td>quota top-up · limit hit · upgrade</td></tr>
+          <tr><td class="mono">kyc.*</td><td>registered · image viewed · activated · rejected</td></tr>
+          <tr><td class="mono">platform.*</td><td>operator allocate · suspend · break-glass</td></tr>
+        </tbody>
+      </table></div>
+      <p class="small muted" style="margin-top:8px">Never-log list extended: plain passwords, tokens — and now <b>salary amounts and tax IDs never appear in the audit body</b>, only references.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>Reporting inventory</h3>
+      <div class="tblwrap"><table class="tbl">
+        <thead><tr><th>Area</th><th>Reports</th></tr></thead>
+        <tbody>
+          <tr><td class="fn">HR</td><td>headcount · attendance · leave · turnover</td></tr>
+          <tr><td class="fn">Payroll</td><td>cost summary · NSSF schedule · PIT withholding · payslip register</td></tr>
+          <tr><td class="fn">Accounting</td><td>P&amp;L-lite · cashflow · tax summary · cost-per-head</td></tr>
+          <tr><td class="fn">System</td><td>audit trail · access · capacity/usage · message log</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note ok" style="margin-top:12px"><b>Built by replay.</b> <span class="mono">dw_reports</span> is derived — it rebuilds from the operational stores, now with finance series (revenue, staff cost, margin) per tenant. Delete a tenant and its reports vanish with it.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= §9 FREE TIER & MOAT ================= -->
+<section id="s9">
+  <div class="sechead"><span class="secno">§9</span><h2>Free tier economics &amp; the unfair advantage</h2></div>
+  <p class="secsub">Why this can be free where rivals can't, and why it's defensible — the six differentiators from the ASEAN clock-in research, mapped onto this branch.</p>
+
+  <div class="card">
+    <h3><span class="dot"></span>The economics — free isn't a loss leader, it's the architecture</h3>
+    <div class="grid cols-3" style="margin-top:4px">
+      <div><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">Zero marginal infra</div><p class="small muted">Static SPA on Pages, one Worker, one shared Turso DB — all free tiers. A new tenant is rows, not servers. Shared-schema multi-tenancy is what makes "free forever for small shops" survive contact with the bill.</p></div>
+      <div><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">Pay for reach, not software</div><p class="small muted">The product is free; money comes from metered LINE/WhatsApp and capacity add-ons (§2.4/§7) — costs that scale only with tenants who get real value.</p></div>
+      <div><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">Upgrade path baked in</div><p class="small muted">Same stores, same tenant_id: a shop that outgrows 2 personas moves to the 5-persona enterprise line with no migration. Free tier feeds the paid line.</p></div>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot"></span>The moat — six bets, mapped here</h3>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Differentiator</th><th>In this branch</th></tr></thead>
+      <tbody>
+        <tr><td class="fn">Lao-first statutory localization <span class="badge adeptio" style="font-size:9px">the moat</span></td><td>NSSF + PIT + Profit Tax/CIT computed correctly, bilingual EN/ລາວ, Lao tax calendar &amp; min-wage out of the box (§5/§6)</td></tr>
+        <tr><td class="fn">Never-block, offline-first punch</td><td>Staff PWA queues punches with no signal; server-authoritative time on sync (§3)</td></tr>
+        <tr><td class="fn">Privacy-as-a-feature</td><td>Selfie-as-photo by default (below biometric bar); export is a logged, consented act (§3/§8)</td></tr>
+        <tr><td class="fn">Edge identity + hardware-agnostic</td><td>Inherited LDAP/RADIUS + optional Sysmatik device bridge — one ledger, terminal + mobile + kiosk</td></tr>
+        <tr><td class="fn">Humane anti-fraud</td><td>Flags route to the owner's review queue; never auto-docks pay (§3/§5)</td></tr>
+        <tr><td class="fn">Transparent pricing</td><td>Free tier + published metered add-ons where rivals are quote-only (§7/§2.4)</td></tr>
+      </tbody>
+    </table></div>
+    <p class="small muted" style="margin-top:8px">The gap the research named — <i>"Laos + edge-secure mid-market: nobody owns Lao statutory + on-prem identity + hardware-agnostic edge"</i> — is exactly where this branch plays, now reachable by the smallest shop for free.</p>
+  </div>
+</section>
+
+<!-- ================= §10 DATA MODEL ================= -->
+<section id="s10">
+  <div class="sechead"><span class="secno">§10</span><h2>Data model — the stores, plus four for this branch</h2></div>
+  <p class="secsub">Carry the parent's eleven stores and the sysmatik additions, give every operational store a <span class="mono">tenant_id</span>, and add five: the tenant spine, the cashbook, the tax engine, the license meter, and the sealed KYC registry.</p>
+
+  <div class="tblwrap"><table class="tbl">
+    <thead><tr><th>Store</th><th>Holds</th><th>Status</th><th>Custody</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">db_people</td><td>employees · divisions</td><td><span class="badge plain">parent +tenant_id</span></td><td>ops</td></tr>
+      <tr><td class="mono">db_time</td><td>punches</td><td><span class="badge plain">parent +tenant_id</span></td><td>ops</td></tr>
+      <tr><td class="mono">db_leave</td><td>leave types · balances</td><td><span class="badge plain">parent +tenant_id</span></td><td>ops</td></tr>
+      <tr><td class="mono">db_workflow</td><td>request ledger (LV/OT/EX/TC) · shifts · swap/open-shift</td><td><span class="badge plain">parent +tenant_id</span></td><td>ops</td></tr>
+      <tr><td class="mono">db_payroll</td><td>payslips · pay runs · advances (EWA)</td><td><span class="badge plain">parent +tenant_id</span></td><td><span class="badge bad">sealed</span></td></tr>
+      <tr><td class="mono">db_comms</td><td>templates · channels · sent log <span class="small muted">(+LINE/WA)</span></td><td><span class="badge plain">parent +tenant_id</span></td><td>ops</td></tr>
+      <tr><td class="mono">db_docs</td><td>document metadata</td><td><span class="badge plain">parent +tenant_id</span></td><td>ops</td></tr>
+      <tr><td class="mono">db_audit</td><td>append-only facts <span class="small muted">(+payroll/ledger/tax/export)</span></td><td><span class="badge plain">parent +tenant_id</span></td><td>append-only</td></tr>
+      <tr><td class="mono">dw_reports</td><td>snapshots · series <span class="small muted">(+finance)</span></td><td><span class="badge plain">parent +tenant_id</span></td><td>derived</td></tr>
+      <tr><td class="mono">db_platform</td><td>flags · placement · backups</td><td><span class="badge plain">parent</span></td><td>global</td></tr>
+      <tr><td class="mono">db_identity</td><td>accounts · sessions · providers</td><td><span class="badge plain">parent +tenant_id</span></td><td><span class="badge bad">sealed · server-auth</span></td></tr>
+      <tr><td class="mono">db_attendance</td><td>live check-in events</td><td><span class="badge plain">sysmatik · opt</span></td><td>ops</td></tr>
+      <tr><td class="mono">db_devices</td><td>terminals · kiosks</td><td><span class="badge plain">sysmatik · opt</span></td><td>ops</td></tr>
+      <tr><td class="mono">db_punch_policy</td><td>check rules · grades</td><td><span class="badge plain">sysmatik · opt</span></td><td>ops</td></tr>
+      <tr><td class="mono">db_tenant</td><td><b>company profile · phone · entity type · plan · flags · sites[] (geofence) · integrations (cloud) · KYC status</b></td><td><span class="badge brand">NEW · spine</span></td><td>global/tenant</td></tr>
+      <tr><td class="mono">db_ledger</td><td><b>cashbook — revenue / expense entries</b></td><td><span class="badge brand">NEW</span></td><td><span class="badge bad">sealed</span></td></tr>
+      <tr><td class="mono">db_tax</td><td><b>tax tables (effective-dated) · computed periods</b></td><td><span class="badge brand">NEW</span></td><td><span class="badge bad">sealed</span></td></tr>
+      <tr><td class="mono">db_license</td><td><b>seat buckets {staff:10, manager:3, admin:1} · message quotas · usage · add-ons</b></td><td><span class="badge brand">NEW</span></td><td>tenant</td></tr>
+      <tr><td class="mono">db_registration</td><td><b>KYC — ID-card &amp; selfie images · email/phone · verify status · reviewer · decision</b></td><td><span class="badge brand">NEW</span></td><td><span class="badge bad">sealed · KYC</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note" style="margin-top:14px"><b>Custody flip extends.</b> Where the parent made only <span class="mono">db_identity</span> server-authoritative, this branch seals <span class="mono">db_payroll</span>, <span class="mono">db_ledger</span>, <span class="mono">db_tax</span> and <span class="mono">db_registration</span> (KYC) too: money, salaries and ID images are owned by the edge Worker and never pushed over the browser's open sync — only the non-sensitive ops stores ride the offline-first channel. The <b>Platform Admin</b> reads cross-tenant on the global plane but is gated out of these sealed stores' <i>content</i> (metadata/counts only; sealed access is break-glass + audited).</div>
+</section>
+
+<!-- ================= §11 DECISIONS ================= -->
+<section id="s11">
+  <div class="sechead"><span class="secno">§11</span><h2>Decisions — DS1–DS16 · what's settled, what's open</h2></div>
+  <p class="secsub">The branch-shaping calls. Settled ones are locked from your answers; open ones are commercial, flagged for you.</p>
+
+  <div class="grid cols-2">
+    <div>
+      <div class="qa"><div class="q">DS1 · Tenancy <span class="badge ok">decided</span></div><div class="opts">Shared DB + <b>tenant_id</b> row-scoping. Cheapest per-tenant; sealed stores still custody-scoped. Isolated-DB reserved as a paid upgrade.</div></div>
+      <div class="qa"><div class="q">DS2 · Personas <span class="badge ok">decided</span></div><div class="opts"><b>Three</b> — Staff · Owner · <b>Platform Admin</b>. Two serve the tenant; the third is the cross-tenant operator (§4P).</div></div>
+      <div class="qa"><div class="q">DS3 · Owner &amp; seats <span class="badge ok">decided</span></div><div class="opts">Owner = union of <b>manager+hr+ceo+sysadmin</b>, occupies the <b>1 admin seat</b>; up to <b>3 Managers</b> (manager scope) + <b>10 Staff</b> = <b>14</b>/tenant.</div></div>
+      <div class="qa"><div class="q">DS4 · Payroll leveling <span class="badge ok">decided</span></div><div class="opts"><b>L0–L3</b>, owner-selectable. Raising a level never rewrites closed runs.</div></div>
+      <div class="qa"><div class="q">DS5 · Tax depth <span class="badge ok">decided</span></div><div class="opts"><b>Full compliance pack</b>, revealed by level + entity switch (sole-trader Profit Tax vs company CIT).</div></div>
+      <div class="qa"><div class="q">DS10 · Platform plane <span class="badge ok">decided</span></div><div class="opts">3rd persona is cross-tenant (<span class="mono">tenant_id=null</span>, inverted guard); manages resources &amp; lifecycle, <b>boundary</b> on sealed salary/PII/KYC content (break-glass + audited).</div></div>
+      <div class="qa"><div class="q">DS11 · Onboarding <span class="badge ok">decided</span></div><div class="opts">KYC register (email + phone + <b>ID card</b> + <b>selfie match</b>) → <b>manual activation</b> by Platform Admin. Sealed in <span class="mono">db_registration</span>.</div></div>
+      <div class="qa"><div class="q">DS12 · Geofence <span class="badge ok">decided</span></div><div class="opts">Manager-set pin + radius, <b>default 30 m</b>, adjustable per site; verify photo GPS; outside = flag, <b>never blocks</b> the punch.</div></div>
+      <div class="qa"><div class="q">DS13 · Feature wave <span class="badge ok">committed</span></div><div class="opts"><b>9 features</b> selected from the competitive report (detailed in §W): scheduling, shift-swap, earned-to-date, clear payslip, payday alert, EWA, one-tap payroll, compliance nudges, labour-cost vs revenue. <b>Hiring/onboarding deferred.</b></div></div>
+      <div class="qa"><div class="q">DS14 · Feature flags <span class="badge ok">decided</span></div><div class="opts">Core always-on; <b>every non-core feature is a per-tenant switch</b> (§F). Owner toggles all; manager an operational subset. Off = hide + pause, data retained. Audited.</div></div>
+      <div class="qa"><div class="q">DS15 · DB control <span class="badge ok">decided</span></div><div class="opts">Per-tenant isolation (§D). Owner: add/delete/<b>backup/restore/export</b> own tenant. Platform: <b>reset/purge/migrate per tenant</b>, one at a time, auto-snapshot + confirm + audit. Sealed content = break-glass.</div></div>
+      <div class="qa"><div class="q">DS16 · Approval engine <span class="badge ok">decided</span></div><div class="opts">One primitive behind all flows (§A · BO-26): request → checks → decision → outcome + audit. Worker-protecting checks <b>flag, never block</b>.</div></div>
+      <div class="qa"><div class="q">DS17 · Cloud backup <span class="badge ok">decided</span></div><div class="opts"><b>Weekly</b> XLS (all user fields) + 2-page PDF (staff behaviour · revenue/expenses) auto-uploaded to owner's <b>Dropbox + Google Drive</b> folder (§W #10 · BO-27). Owner-only, off by default; tokens sealed; export logged; platform cron sweeps due tenants.</div></div>
+      <div class="qa"><div class="q">DS18 · Build state <span class="badge ok">recorded</span></div><div class="opts">Demo shell + <b>live engines</b> built (§S): payroll/accounting/tax/reports/governance/feature-wave run &amp; reconcile; smoke green (233). <b>Remaining:</b> live backend, XLSX/PDF, LINE/WA adapters, clock-in capture, cloud pipeline, ລາວ pack, deploy.</div></div>
+    </div>
+    <div>
+      <div class="qa"><div class="q">DS6 · Channels <span class="badge ok">decided</span></div><div class="opts">In-app + email <b>free</b>; <b>LINE + WhatsApp metered</b>, debiting a tenant quota.</div></div>
+      <div class="qa"><div class="q">DS8 · Custody <span class="badge ok">decided</span></div><div class="opts"><b>db_payroll · db_ledger · db_tax</b> sealed + server-authoritative, alongside db_identity. Money never rides the open sync.</div></div>
+      <div class="qa"><div class="q">DS9 · Reuse over rebuild <span class="badge ok">decided</span></div><div class="opts">No new permission engine — re-bundle parent scopes; inherit auth, custody, sync, backup, audit.</div></div>
+      <div class="qa"><div class="q">DS7 · Pricing <span class="badge warn">part-open</span></div><div class="opts">Seat side <b>set</b>: free tier = 10/3/1 = 14. <b>Still open:</b> the LINE/WhatsApp per-message price (pass-through vs. margin) and paid-tier seat ladders. Plumbing ready for any numbers.</div></div>
+      <div class="qa"><div class="q">Also open</div><div class="opts">VAT default on/off · LINE OA vs WhatsApp Cloud API provider · offer isolated-DB upgrade tier?</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= §W FEATURE WAVE ================= -->
+<section id="sw">
+  <div class="sechead"><span class="secno">§W</span><h2>Committed feature wave — selected from the competitive report</h2></div>
+  <p class="secsub">Ten features chosen for this branch — nine from the competitive report shortlist (§§4/7/8 there) plus the owner-requested <b>weekly cloud backup &amp; reports</b> (#10). All are <b>in scope</b>; <b>Hiring/onboarding is deferred</b>. Each maps to a persona, a home in the platform, the data it touches, and a build packet in §B.</p>
+
+  <div class="tblwrap"><table class="tbl">
+    <thead><tr><th>#</th><th>Feature</th><th>Persona</th><th>Lives in</th><th>Data</th><th>Packet</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">1</td><td class="fn">Scheduling / roster upgrade</td><td>Owner + Staff</td><td>2.1 Scheduling · Staff → Schedule</td><td class="mono">db_workflow</td><td><span class="badge brand">BO-15</span></td></tr>
+      <tr><td class="mono">2</td><td class="fn">Shift swap &amp; open-shift</td><td>Staff → Owner</td><td>Staff → Schedule · owner approvals</td><td class="mono">db_workflow</td><td><span class="badge brand">BO-16</span></td></tr>
+      <tr><td class="mono">3</td><td class="fn">Earned-to-date tracker</td><td>Staff</td><td>Staff → Pay</td><td class="mono">derived</td><td><span class="badge brand">BO-17</span></td></tr>
+      <tr><td class="mono">4</td><td class="fn">Crystal-clear bilingual payslip</td><td>Staff</td><td>Staff → Pay · §5</td><td class="mono">db_payroll</td><td><span class="badge brand">BO-18</span></td></tr>
+      <tr><td class="mono">5</td><td class="fn">Instant payday / payslip alert</td><td>Staff</td><td>§7 comms</td><td class="mono">db_comms</td><td><span class="badge brand">BO-19</span></td></tr>
+      <tr><td class="mono">6</td><td class="fn">Earned-wage access (EWA)</td><td>Staff + Owner</td><td>Staff → Pay · Payroll → Advances</td><td class="mono">db_payroll</td><td><span class="badge brand">BO-20</span></td></tr>
+      <tr><td class="mono">7</td><td class="fn">One-tap payroll run</td><td>Owner</td><td>Payroll → Run</td><td class="mono">db_payroll</td><td><span class="badge brand">BO-21</span></td></tr>
+      <tr><td class="mono">8</td><td class="fn">Compliance-calendar nudges</td><td>Owner</td><td>2.2 Tax centre · §7</td><td class="mono">db_tax · db_comms</td><td><span class="badge brand">BO-22</span></td></tr>
+      <tr><td class="mono">9</td><td class="fn">Live labour-cost vs revenue</td><td>Owner</td><td>Dashboard · 2.2 Cost&amp;benefit</td><td class="mono">dw_reports</td><td><span class="badge brand">BO-23</span></td></tr>
+      <tr style="background:var(--ceo-bg)"><td class="mono">10</td><td class="fn">Weekly cloud backup &amp; reports</td><td>Owner</td><td>2.3 Integrations + Data studio</td><td class="mono">db_tenant · dw_reports</td><td><span class="badge brand">BO-27</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note" style="margin-top:8px"><span class="badge road">deferred</span> Hiring / onboarding flow (report §4 · P2) — intentionally <b>not</b> in this wave; revisit when recruiting becomes a priority.</div>
+
+  <div style="height:16px"></div>
+  <div class="grid cols-2">
+    <div class="card"><h3><span class="dot" style="background:var(--staff)"></span>Earned-wage access — Lao-correct, owner-funded</h3>
+      <p class="small">A <b>salary advance against earned-to-date</b>, not a third-party loan: owner-approved, capped (default <b>≤50% of earned-to-date net</b>), recovered as a single deduction line on the next payslip. Funded from the owner's float — culturally the familiar Lao salary advance.</p>
+      <ul class="tick" style="margin-top:8px">
+        <li>Draw request → owner approve → pay out → auto-recover at payday</li>
+        <li>Sealed in <span class="mono">db_payroll</span>; each draw + recovery an audited fact</li>
+        <li>Leveling-aware (L1+); never blocks the pay run</li>
+      </ul>
+    </div>
+    <div class="card"><h3><span class="dot" style="background:var(--staff)"></span>Earned-to-date + "why this number" payslip</h3>
+      <p class="small"><b>Earned-to-date</b> = Σ(days worked × daily rate + approved OT) − running statutory accrual, computed live from <span class="mono">db_time</span> × comp profile. It powers the staff tracker <i>and</i> the EWA cap.</p>
+      <p class="small" style="margin-top:6px">The payslip expands every line — gross → NSSF → PIT → net — in <b>EN/ລາວ</b> on tap, so pay feels fair and payday disputes drop.</p>
+    </div>
+    <div class="card"><h3><span class="dot" style="background:var(--ceo)"></span>One-tap payroll run</h3>
+      <p class="small">The §5 lifecycle compressed to one screen for a clean month: <b>preview totals → approve → pay → file</b>. Guardrails hold — can't skip approval, can't run with unresolved exceptions, closed runs stay immutable (fixes via adjustment run).</p>
+    </div>
+    <div class="card"><h3><span class="dot" style="background:var(--ceo)"></span>Compliance nudges &amp; live labour-cost</h3>
+      <p class="small"><b>Nudges:</b> <span class="mono">db_tax</span> calendar items (NSSF/PIT monthly · VAT · PT/CIT) become reminders — in-app + optional LINE — each carrying the pre-computed figure and a "mark filed" that logs <span class="mono">tax.filed</span>.</p>
+      <p class="small" style="margin-top:6px"><b>Labour-cost:</b> a dashboard tile pits today's wage burn (gross + employer NSSF, prorated from punches) against today's cashbook revenue, with margin — updating as punches and sales land.</p>
+    </div>
+    <div class="card" style="grid-column:1/-1"><h3><span class="dot" style="background:var(--mgr)"></span>Scheduling + shift-swap — guardrailed</h3>
+      <p class="small">Roster with shift <b>templates</b> (publish to staff). Staff <b>request a swap</b> or <b>claim an open shift</b>; owner/manager approves — <b>never auto</b>. A swap is checked against the Lao OT guardrails (≤3h/day, ≤45h/month) so it can't silently create illegal overtime. Stored as shift records + swap/open-shift requests in <span class="mono">db_workflow</span>, reusing the parent's shared-ID request ledger.</p>
+    </div>
+  </div>
+
+  <div style="height:18px"></div>
+  <div class="card">
+    <h3><span class="dot" style="background:var(--ceo)"></span>#10 · Weekly cloud backup &amp; reports <span class="badge ceo" style="font-size:10px">owner · optional</span></h3>
+    <p class="small muted" style="margin-bottom:12px">Every week Adeptio bundles the tenant's data into an <b>XLS</b> and a <b>2-page PDF</b> and uploads them to the owner's own <b>Dropbox</b> and <b>Google Drive</b> folder — an off-platform safety copy and a ready-to-read summary, no manual export. Runs on the platform scheduler; the owner sets it up once.</p>
+    <div class="grid cols-3">
+      <div class="card" style="box-shadow:none;background:var(--surface-2);padding:15px"><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">① Destinations</div>
+        <ul class="tick" style="font-size:12.5px">
+          <li>Connect <b>Dropbox</b> + <b>Google Drive</b> (OAuth)</li>
+          <li>Pick a <b>specific folder</b> in each (folder picker)</li>
+          <li>Either or both; tokens sealed (vault ref)</li>
+        </ul>
+      </div>
+      <div class="card" style="box-shadow:none;background:var(--surface-2);padding:15px"><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">② The XLS</div>
+        <ul class="tick" style="font-size:12.5px">
+          <li><b>All users, all fields</b> — full roster export</li>
+          <li>+ weekly stats per staff, auto-summarised</li>
+          <li>One workbook (Users + summary tabs), SheetJS</li>
+        </ul>
+      </div>
+      <div class="card" style="box-shadow:none;background:var(--surface-2);padding:15px"><div class="h" style="font-weight:600;font-size:13px;margin-bottom:6px">③ Schedule</div>
+        <ul class="tick" style="font-size:12.5px">
+          <li><b>Weekly</b> — owner sets day + time</li>
+          <li>Worker Cron run · last-run status</li>
+          <li>Retry, then <b>alert owner</b> on failure</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="lab" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin:16px 0 6px">The PDF report — two pages</div>
+    <div class="split">
+      <div>
+        <div class="h"><span class="badge staff">Page 1</span> Staff report</div>
+        <p class="small muted" style="margin-bottom:6px">Weekly staff behaviour — <b>table + graph</b>:</p>
+        <ul class="tick" style="font-size:12.5px">
+          <li>Per staff: attendance <b>in/out date-time</b></li>
+          <li><b>OT</b> hours · <b>leave</b> taken</li>
+          <li><b>Shift swap / sale-buy</b> count</li>
+          <li>Lateness &amp; geofence flags</li>
+          <li>Graph: attendance &amp; OT by day / by staff</li>
+        </ul>
+      </div>
+      <div>
+        <div class="h"><span class="badge ceo">Page 2</span> Revenue / Expenses report</div>
+        <p class="small muted" style="margin-bottom:6px">Money <b>inflow vs outflow</b> — table + chart:</p>
+        <ul class="tick" style="font-size:12.5px">
+          <li>Split by <b>day · week · month</b></li>
+          <li>Revenue in · expenses out · net</li>
+          <li>Staff cost line (from payroll)</li>
+          <li>Chart: in vs out trend, margin</li>
+          <li>Ties to §6 cashbook &amp; cost/benefit</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note warn" style="margin-top:14px"><b>Sensitive export.</b> The bundle contains people + money data, so each run is logged as an <span class="mono">export.*</span> fact, cloud tokens are sealed, and the feature is <b>owner-only</b> and <b>off by default</b> (§F). Build packet <span class="badge brand">BO-27</span>; flow in §A · #13.</div>
+  </div>
+</section>
+
+<!-- ================= §F FEATURE FLAGS ================= -->
+<section id="sf">
+  <div class="sechead"><span class="secno">§F</span><h2>Enable / disable — every non-core feature is a switch</h2></div>
+  <p class="secsub">A small shop shouldn't be forced to see EWA, shift-swap or WhatsApp if it doesn't want them. <b>Core features are always on</b> (the shop can't run without them); <b>everything else is a per-tenant switch</b> the owner — and, for operational ones, the manager — flips in <span class="mono">2.3 System Management → Functions</span>. Turning a feature off hides its menu and stops its engine but <b>keeps its data</b>, so re-enabling restores it untouched.</p>
+
+  <div class="grid cols-2">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--bad)"></span>Core — locked on (cannot disable)</h3>
+      <ul class="tick">
+        <li>Clock in/out (punch) · attendance</li>
+        <li>Leave request &amp; balance</li>
+        <li>Payroll core — NSSF + PIT + payslip</li>
+        <li>Accounting cashbook + tax centre (statutory)</li>
+        <li>Identity / access &amp; security</li>
+        <li>Audit log + backup</li>
+      </ul>
+      <p class="small muted" style="margin-top:8px">These carry legal or operational necessity — a switch-off would break compliance or lock people out, so the toggle isn't offered.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--ok)"></span>How the switch behaves</h3>
+      <ul class="tick">
+        <li><b>Per-tenant</b> — stored in <span class="mono">db_tenant.flags</span>; one shop's choices never touch another's</li>
+        <li><b>Instant</b> — flip on/off; menu &amp; engine follow immediately</li>
+        <li><b>Non-destructive</b> — off hides + pauses, data is retained; on restores</li>
+        <li><b>Audited</b> — every flip writes a <span class="mono">flag.*</span> fact (who, when)</li>
+        <li><b>Plan-gated</b> — Platform Admin can make some flags available only on paid tiers (§D)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot"></span>Optional features — the switchboard <span class="badge brand" style="font-size:10px">2.3 → Functions</span></h3>
+    <p class="small muted" style="margin-bottom:12px">Default state shown; <b>toggle-by</b> says who may change it — <span class="badge ceo" style="font-size:9px">Owner</span> for money/cost/policy, <span class="badge mgr" style="font-size:9px">Owner + Mgr</span> for operational/staff-facing.</p>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Feature</th><th class="c">Default</th><th>Toggle by</th><th>Off means</th></tr></thead>
+      <tbody>
+        <tr><td class="fn">Geofence on punch</td><td class="c"><span class="sw"></span></td><td><span class="badge mgr">Owner + Mgr</span></td><td>punch still works, no location grade</td></tr>
+        <tr><td class="fn">Selfie capture</td><td class="c"><span class="sw"></span></td><td><span class="badge mgr">Owner + Mgr</span></td><td>punch without photo</td></tr>
+        <tr><td class="fn">Scheduling / roster</td><td class="c"><span class="sw"></span></td><td><span class="badge mgr">Owner + Mgr</span></td><td>no shifts/roster module</td></tr>
+        <tr><td class="fn">Shift swap &amp; open-shift</td><td class="c"><span class="sw"></span></td><td><span class="badge mgr">Owner + Mgr</span></td><td>schedule fixed, no swaps</td></tr>
+        <tr><td class="fn">Earned-to-date tracker</td><td class="c"><span class="sw"></span></td><td><span class="badge mgr">Owner + Mgr</span></td><td>hidden from staff app</td></tr>
+        <tr><td class="fn">Compliance-calendar nudges</td><td class="c"><span class="sw"></span></td><td><span class="badge mgr">Owner + Mgr</span></td><td>calendar stays, no reminders</td></tr>
+        <tr><td class="fn">Live labour-cost tile</td><td class="c"><span class="sw"></span></td><td><span class="badge mgr">Owner + Mgr</span></td><td>tile hidden from dashboard</td></tr>
+        <tr><td class="fn">Earned-wage access (EWA)</td><td class="c"><span class="sw off"></span></td><td><span class="badge ceo">Owner</span></td><td>no advances (default off)</td></tr>
+        <tr><td class="fn">One-tap payroll run</td><td class="c"><span class="sw"></span></td><td><span class="badge ceo">Owner</span></td><td>full step-by-step run only</td></tr>
+        <tr><td class="fn">LINE channel</td><td class="c"><span class="sw off"></span></td><td><span class="badge ceo">Owner</span></td><td>no LINE sends (cost control)</td></tr>
+        <tr><td class="fn">WhatsApp channel</td><td class="c"><span class="sw off"></span></td><td><span class="badge ceo">Owner</span></td><td>no WhatsApp sends (cost control)</td></tr>
+        <tr><td class="fn">Weekly cloud backup &amp; reports</td><td class="c"><span class="sw off"></span></td><td><span class="badge ceo">Owner</span></td><td>no scheduled export/upload (default off)</td></tr>
+        <tr><td class="fn">Recognition / tips / e-sign / multi-site <span class="small muted">(later)</span></td><td class="c"><span class="sw off"></span></td><td><span class="badge ceo">Owner</span></td><td>not shown until enabled</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note" style="margin-top:12px"><b>Manager boundary.</b> A manager can tune how the shop <i>operates</i> (geofence, scheduling, swaps, nudges, what staff see) but not what it <i>spends or owes</i> — metered channels, EWA policy and one-tap payroll stay owner-only. The flag engine enforces this with the same scope rule as the rest of the platform.</div>
+  </div>
+</section>
+
+<!-- ================= §A APPROVAL FLOWS ================= -->
+<section id="sa">
+  <div class="sechead"><span class="secno">§A</span><h2>Approval flows — a chart for every decision</h2></div>
+  <p class="secsub">Every place a request meets a decision, drawn the same way: a <b>start</b>, the checks, one <b>decision</b>, and the <span style="color:var(--ok-text)">approve</span> / <span style="color:var(--bad-text)">reject</span> branches. The rule that runs through all of them: <b>nothing that protects a worker ever hard-blocks</b> — a failed check flags and routes to review, it doesn't lock the person out.</p>
+  <div class="legend">
+    <span class="g"><span class="n start" style="padding:3px 8px;font-size:10px;border-radius:8px">start</span></span>
+    <span class="g"><span class="n dec" style="padding:3px 8px;font-size:10px;border-radius:8px">decision</span></span>
+    <span class="g"><span class="n end" style="padding:3px 10px;font-size:10px">approved ✓</span></span>
+    <span class="g"><span class="n bad" style="padding:3px 10px;font-size:10px">rejected ✗</span></span>
+  </div>
+
+  <div class="fcgrid">
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--sys)"></span>1 · Staff access / activation</h4>
+      <div class="fc">
+        <div class="n start">Owner/HR invites (email)</div><div class="ar">↓</div>
+        <div class="n">72-hour activation link sent</div><div class="ar">↓</div>
+        <div class="n dec">Link used in time?</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">yes</span><div class="n">Set password (policy)</div><div class="ar">↓</div><div class="n end">Account active ✓</div></div>
+          <div class="lane"><span class="lbl n">expired</span><div class="n">Owner re-invites</div><div class="ar">↓</div><div class="n bad">Pending ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--staff)"></span>2 · Leave request</h4>
+      <div class="fc">
+        <div class="n start">Staff requests leave</div><div class="ar">↓</div>
+        <div class="n">Balance auto-checked</div><div class="ar">↓</div>
+        <div class="n dec">Owner / Manager decision</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">approve</span><div class="n">Balance debited · calendar</div><div class="ar">↓</div><div class="n end">Staff notified ✓</div></div>
+          <div class="lane"><span class="lbl n">reject</span><div class="n">Reason logged</div><div class="ar">↓</div><div class="n bad">Declined ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--staff)"></span>3 · Overtime</h4>
+      <div class="fc">
+        <div class="n start">OT worked / requested</div><div class="ar">↓</div>
+        <div class="n">Hours costed at Lao rate (150/250/350%)</div><div class="ar">↓</div>
+        <div class="n dec">Within ≤3h/day, ≤45h/mo &amp; approved?</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">yes</span><div class="n">Added to pay run</div><div class="ar">↓</div><div class="n end">Paid ✓</div></div>
+          <div class="lane"><span class="lbl n">over limit</span><div class="n">Guardrail flag → review</div><div class="ar">↓</div><div class="n bad">Held ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--staff)"></span>4 · Punch / geofence correction <span class="badge ok" style="font-size:9px">never-block</span></h4>
+      <div class="fc">
+        <div class="n start">Staff punches (offline-safe)</div><div class="ar">↓</div>
+        <div class="n">Punch saved · GPS vs geofence</div><div class="ar">↓</div>
+        <div class="n dec">Inside radius?</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">yes</span><div class="n end">Evidence-grade ✓</div></div>
+          <div class="lane"><span class="lbl n">no / weak</span><div class="n">Flag (still saved) → review</div><div class="ar">↓</div><div class="n">Owner: accept / ask fix</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--staff)"></span>5 · Shift swap</h4>
+      <div class="fc">
+        <div class="n start">Staff A offers shift → B accepts</div><div class="ar">↓</div>
+        <div class="n">OT guardrail auto-checked</div><div class="ar">↓</div>
+        <div class="n dec">Owner / Manager approve?</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">approve</span><div class="n">Roster updated · both notified</div><div class="ar">↓</div><div class="n end">Swapped ✓</div></div>
+          <div class="lane"><span class="lbl n">reject / breaks OT</span><div class="n bad">Original stands ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--staff)"></span>6 · Open-shift claim</h4>
+      <div class="fc">
+        <div class="n start">Owner posts open shift</div><div class="ar">↓</div>
+        <div class="n">Staff claims it</div><div class="ar">↓</div>
+        <div class="n dec">Owner / Manager approve? (OT-guard)</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">approve</span><div class="n end">Assigned ✓</div></div>
+          <div class="lane"><span class="lbl n">decline</span><div class="n bad">Stays open ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--ceo)"></span>7 · Earned-wage access (EWA)</h4>
+      <div class="fc">
+        <div class="n start">Staff requests advance</div><div class="ar">↓</div>
+        <div class="n">Cap check ≤ 50% earned-to-date</div><div class="ar">↓</div>
+        <div class="n dec">Within cap &amp; Owner approves?</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">approve</span><div class="n">Pay out · recovery scheduled</div><div class="ar">↓</div><div class="n end">Advanced ✓</div></div>
+          <div class="lane"><span class="lbl n">over cap / no</span><div class="n bad">Declined ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--ceo)"></span>8 · Payroll run</h4>
+      <div class="fc">
+        <div class="n start">Owner starts run (or one-tap)</div><div class="ar">↓</div>
+        <div class="n">Gather punches · OT · EWA</div><div class="ar">↓</div>
+        <div class="n dec">Exceptions resolved?</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">yes</span><div class="n">Approve → pay → file</div><div class="ar">↓</div><div class="n end">Closed · immutable ✓</div></div>
+          <div class="lane"><span class="lbl n">no</span><div class="n bad">Held at review ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--ceo)"></span>9 · Expense / cash entry</h4>
+      <div class="fc">
+        <div class="n start">Owner/Mgr enters expense</div><div class="ar">↓</div>
+        <div class="n dec">Approval required? <span class="small muted">(flag)</span></div>
+        <div class="br">
+          <div class="lane"><span class="lbl lp">off</span><div class="n end">Posted to cashbook ✓</div></div>
+          <div class="lane"><span class="lbl y">on → Owner</span><div class="n">Approve / reject</div><div class="ar">↓</div><div class="n end">Posted ✓ / void ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--ceo)"></span>10 · Tax filing</h4>
+      <div class="fc">
+        <div class="n start">Period due → nudge (figure ready)</div><div class="ar">↓</div>
+        <div class="n dec">Owner files &amp; marks filed?</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">filed</span><div class="n">tax.filed logged</div><div class="ar">↓</div><div class="n end">Done ✓</div></div>
+          <div class="lane"><span class="lbl n">not yet</span><div class="n">Nudge repeats</div><div class="ar">↓</div><div class="n bad">Overdue flag ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--sys)"></span>11 · Tenant KYC activation <span class="badge sys" style="font-size:9px">platform</span></h4>
+      <div class="fc">
+        <div class="n start">Owner registers · ID + selfie</div><div class="ar">↓</div>
+        <div class="n">Tenant pending · KYC sealed</div><div class="ar">↓</div>
+        <div class="n dec">Platform Admin: selfie ↔ ID match?</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">activate</span><div class="n">Provision · seats · seed</div><div class="ar">↓</div><div class="n end">Tenant live ✓</div></div>
+          <div class="lane"><span class="lbl n">reject</span><div class="n">Reason logged</div><div class="ar">↓</div><div class="n bad">Rejected ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--sys)"></span>12 · Tenant DB op — reset/restore/purge <span class="badge sys" style="font-size:9px">platform</span></h4>
+      <div class="fc">
+        <div class="n start">Platform Admin requests DB op</div><div class="ar">↓</div>
+        <div class="n">Scope = one tenant · snapshot taken</div><div class="ar">↓</div>
+        <div class="n dec">Confirm + reason (sealed → break-glass)?</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">confirm</span><div class="n">Execute · audit platform.*</div><div class="ar">↓</div><div class="n end">Done ✓</div></div>
+          <div class="lane"><span class="lbl n">cancel</span><div class="n bad">No change ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fccard"><h4><span class="pin" style="background:var(--ceo)"></span>13 · Weekly cloud backup &amp; report <span class="badge ceo" style="font-size:9px">scheduled</span></h4>
+      <div class="fc">
+        <div class="n start">Weekly schedule due (platform cron)</div><div class="ar">↓</div>
+        <div class="n">Build XLS (all fields) + 2-page PDF</div><div class="ar">↓</div>
+        <div class="n">Upload to Dropbox + Google Drive folder</div><div class="ar">↓</div>
+        <div class="n dec">Upload OK?</div>
+        <div class="br">
+          <div class="lane"><span class="lbl y">yes</span><div class="n">Log export.* · last-run</div><div class="ar">↓</div><div class="n end">Done ✓</div></div>
+          <div class="lane"><span class="lbl n">fail</span><div class="n">Retry → alert owner</div><div class="ar">↓</div><div class="n bad">Flagged ✗</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="note ok" style="margin-top:16px"><b>One engine behind all thirteen.</b> Twelve approvals share a single primitive — <span class="mono">request → (auto-checks) → decision → outcome + audit</span> — so a new approvable action is configuration, not new code (packet BO-26); #13 is a <b>scheduled job</b> on the same engine (BO-27). Worker-protecting checks (geofence, OT, punch) <b>flag</b>; they never block.</div>
+</section>
+
+<!-- ================= §D TENANT & DB ================= -->
+<section id="sd">
+  <div class="sechead"><span class="secno">§D</span><h2>Multi-tenant split &amp; DB control — confirmed</h2></div>
+  <p class="secsub">Confirming the model you asked about: <b>each owner gets their own isolated slice</b> of the shared database; the owner can <b>add, delete, back up and restore their own data</b>; and the <b>Platform Admin can reset or control any single tenant's DB separately</b>, without touching its neighbours.</p>
+
+  <div class="card">
+    <h3><span class="dot"></span>The split — one shared DB, isolated lanes</h3>
+    <div class="grid cols-3" style="margin-top:4px">
+      <div class="card" style="box-shadow:none;background:var(--surface-2);padding:14px"><div class="small strong">Tenant A · Phoungern</div><div class="small muted mono" style="margin-top:4px">tenant_id = A</div><div class="small" style="margin-top:6px"><span class="badge ceo">Owner A</span> sees only A</div></div>
+      <div class="card" style="box-shadow:none;background:var(--surface-2);padding:14px"><div class="small strong">Tenant B · Vientiane Mart</div><div class="small muted mono" style="margin-top:4px">tenant_id = B</div><div class="small" style="margin-top:6px"><span class="badge ceo">Owner B</span> sees only B</div></div>
+      <div class="card" style="box-shadow:none;background:var(--surface-2);padding:14px"><div class="small strong">Tenant C · Lao Coffee</div><div class="small muted mono" style="margin-top:4px">tenant_id = C</div><div class="small" style="margin-top:6px"><span class="badge ceo">Owner C</span> sees only C</div></div>
+    </div>
+    <div class="note" style="margin-top:12px"><span class="badge sys">Platform Admin</span> spans A · B · C for <b>resources &amp; DB ops</b>, one tenant at a time — never their sealed content. The data guard appends <span class="mono">WHERE tenant_id = …</span> to every owner/staff query; a tenant's backup contains <b>only its own rows</b>, and resetting A leaves B and C untouched.</div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="grid cols-2">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--ceo)"></span>Owner — DB control of their own tenant <span class="badge brand" style="font-size:10px">2.3 → Data studio</span></h3>
+      <ul class="tick">
+        <li><b>Add</b> records — people, entries, imports (CSV)</li>
+        <li><b>Delete</b> records — soft-delete, recoverable from backup</li>
+        <li><b>Back up now</b> · <b>scheduled</b> · <b>per-module</b> (the parent's backup ladder)</li>
+        <li><b>Restore</b> a backup — scoped to their tenant</li>
+        <li><b>Export</b> — xlsx / JSON (logged as <span class="mono">export.*</span>)</li>
+      </ul>
+      <p class="small muted" style="margin-top:8px">Bounded to <span class="mono">tenant_id</span> = theirs. No reset/migrate/purge — those are platform-level (right). To leave, an owner <b>requests closure</b>; the Platform Admin executes the purge.</p>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--sys)"></span>Platform Admin — per-tenant control <span class="badge brand" style="font-size:10px">§4P → Database &amp; ops</span></h3>
+      <ul class="tick">
+        <li><b>Backup / restore</b> any tenant individually</li>
+        <li><b>Reset</b> — wipe a tenant back to clean seed</li>
+        <li><b>Purge / terminate</b> — delete a tenant entirely</li>
+        <li><b>Migrate</b> schema · <b>suspend</b> / reactivate</li>
+        <li><b>Snapshot</b> taken automatically before any destructive op</li>
+      </ul>
+      <p class="small muted" style="margin-top:8px">Acts on <b>one tenant at a time</b>; every op is confirm + reason + audited (<span class="mono">platform.*</span>); sealed-content access is break-glass only.</p>
+    </div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot"></span>Operation matrix — who can do what</h3>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Operation</th><th class="c">Owner <span class="small muted">(own tenant)</span></th><th class="c">Platform <span class="small muted">(any tenant)</span></th><th>Safeguard</th></tr></thead>
+      <tbody>
+        <tr><td class="fn">Add / edit records</td><td class="c"><span class="mx y">✓</span></td><td class="c"><span class="mx p">◐</span></td><td>audit</td></tr>
+        <tr><td class="fn">Delete records (soft)</td><td class="c"><span class="mx y">✓</span></td><td class="c"><span class="mx y">✓</span></td><td>recoverable · audit</td></tr>
+        <tr><td class="fn">Back up (now / scheduled / per-module)</td><td class="c"><span class="mx y">✓</span></td><td class="c"><span class="mx y">✓</span></td><td>—</td></tr>
+        <tr><td class="fn">Restore a backup</td><td class="c"><span class="mx y">✓</span></td><td class="c"><span class="mx y">✓</span></td><td>confirm · audit</td></tr>
+        <tr><td class="fn">Export (xlsx / JSON)</td><td class="c"><span class="mx y">✓</span></td><td class="c"><span class="mx y">✓</span></td><td>logged export.*</td></tr>
+        <tr><td class="fn">Reset to seed</td><td class="c"><span class="mx n">—</span></td><td class="c"><span class="mx y">✓</span></td><td>confirm + reason + snapshot</td></tr>
+        <tr><td class="fn">Purge / terminate tenant</td><td class="c"><span class="mx n">— <span class="small muted">request</span></span></td><td class="c"><span class="mx y">✓</span></td><td>confirm + reason + snapshot</td></tr>
+        <tr><td class="fn">Migrate schema</td><td class="c"><span class="mx n">—</span></td><td class="c"><span class="mx y">✓</span></td><td>snapshot · audit</td></tr>
+        <tr><td class="fn">Suspend / reactivate</td><td class="c"><span class="mx n">—</span></td><td class="c"><span class="mx y">✓</span></td><td>audit</td></tr>
+        <tr><td class="fn">Read sealed content (salary/PII/KYC)</td><td class="c"><span class="mx y">✓ <span class="small muted">in-app</span></span></td><td class="c"><span class="mx n">break-glass</span></td><td>break-glass + audit (visible to tenant)</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note ok" style="margin-top:12px"><b>Confirmed:</b> tenant isolation by <span class="mono">tenant_id</span> · owner add/delete/backup/restore on their own slice · platform reset/control per tenant, separately and safely. Build packet <span class="badge brand">BO-25</span>.</div>
+  </div>
+</section>
+
+<!-- ================= §I INTEGRITY ================= -->
+<section id="si">
+  <div class="sechead"><span class="secno">§I</span><h2>Integrity cross-check — personas, functions, stores</h2></div>
+  <p class="secsub">A pass over the whole blueprint to confirm each persona's functions map to real stores, every store has a writer and a reader, boundaries are consistent, and cross-references resolve. Result: <b>linkages sound</b>; a few items formalized and two stale headings fixed (listed below).</p>
+
+  <div class="card">
+    <h3><span class="dot"></span>Persona → function → store linkage</h3>
+    <div class="tblwrap"><table class="tbl">
+      <thead><tr><th>Persona / surface</th><th>Functions</th><th>Stores</th><th>Boundary</th></tr></thead>
+      <tbody>
+        <tr><td class="fn">Staff</td><td>clock · leave · schedule · pay · docs · inbox</td><td class="mono">db_time · db_attendance · db_leave · db_workflow · db_payroll · db_docs · db_comms · db_identity</td><td>own records</td></tr>
+        <tr><td class="fn">Owner · 2.1 Staff Mgr</td><td>people · attendance · scheduling · leave · messaging · access</td><td class="mono">db_people · db_time · db_punch_policy · db_workflow · db_leave · db_comms · db_identity</td><td>own tenant</td></tr>
+        <tr><td class="fn">Owner · Payroll</td><td>runs · components · advances · statutory · payslips</td><td class="mono">db_payroll · db_tax</td><td><span class="badge bad">sealed</span></td></tr>
+        <tr><td class="fn">Owner · 2.2 Accounting</td><td>cashbook · tax · cost/benefit</td><td class="mono">db_ledger · db_tax · dw_reports</td><td><span class="badge bad">sealed</span> ledger/tax</td></tr>
+        <tr><td class="fn">Owner · 2.3 System</td><td>company · functions(flags) · integrations · users · data studio · audit</td><td class="mono">db_tenant · db_platform · db_devices · db_identity · db_audit · (all)</td><td>own tenant</td></tr>
+        <tr><td class="fn">Owner · 2.4 Capacity</td><td>plan · seats · quotas</td><td class="mono">db_license</td><td>own tenant</td></tr>
+        <tr><td class="fn">Platform Admin</td><td>tenants · KYC · resources · allocation · DB ops · audit</td><td class="mono">db_tenant · db_registration · db_license · dw_reports · db_audit · (all metadata)</td><td><span class="badge sys">cross-tenant · metadata</span></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div style="height:16px"></div>
+  <div class="grid cols-2">
+    <div class="card">
+      <h3><span class="dot" style="background:var(--ok)"></span>Store coverage — no orphans</h3>
+      <p class="small muted" style="margin-bottom:8px">All 19 stores have a writer and a reader; sealed stores flagged.</p>
+      <div class="tblwrap"><table class="tbl">
+        <tbody>
+          <tr><td class="mono">db_people/time/leave/workflow</td><td class="small">ops · Staff+Owner</td></tr>
+          <tr><td class="mono">db_payroll</td><td class="small"><span class="badge bad">sealed</span> Payroll ↔ Staff(own)</td></tr>
+          <tr><td class="mono">db_ledger · db_tax</td><td class="small"><span class="badge bad">sealed</span> Accounting</td></tr>
+          <tr><td class="mono">db_comms</td><td class="small">all · channels/log</td></tr>
+          <tr><td class="mono">db_docs · db_audit · dw_reports</td><td class="small">docs · facts · derived</td></tr>
+          <tr><td class="mono">db_attendance · db_devices · db_punch_policy</td><td class="small">sysmatik (opt)</td></tr>
+          <tr><td class="mono">db_tenant · db_license</td><td class="small">spine · capacity</td></tr>
+          <tr><td class="mono">db_registration</td><td class="small"><span class="badge bad">sealed</span> KYC · Platform</td></tr>
+          <tr><td class="mono">db_identity · db_platform</td><td class="small"><span class="badge bad">sealed</span> · global</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot" style="background:var(--warn)"></span>Fixed &amp; formalized this pass</h3>
+      <ul class="tick">
+        <li>Feature on/off was only a menu item → formalized as <b>§F flag model</b> (core vs optional, owner/mgr scope)</li>
+        <li>Approvals were described per-feature → unified into <b>§A</b> + one engine (BO-26)</li>
+        <li>DB rights were implied in menus → set out as <b>§D matrix</b> (owner vs platform) + BO-25</li>
+        <li>Heading "DS1–DS9" → <b>DS1–DS16</b> (decisions had outgrown it)</li>
+        <li>Heading "ten buildable packets" → <b>BO-1…BO-26</b></li>
+        <li>Added <b>DS14–DS16</b> for flags / DB / approvals</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3><span class="dot"></span>Consistency confirmations</h3>
+    <div class="grid cols-2">
+      <ul class="tick">
+        <li><b>Personas = 3</b> everywhere (hero · §1 · §4P · DS2)</li>
+        <li><b>Seats 10/3/1 = 14</b> consistent (§1 · 2.4 · DS3 · BO-13)</li>
+        <li><b>Custody</b> identical across §5/§6/§10/§D — payroll·ledger·tax·identity·registration sealed</li>
+      </ul>
+      <ul class="tick">
+        <li><b>Never-block</b> consistent (§3 · §5 · §A) — checks flag, don't lock out</li>
+        <li><b>§W features ↔ BO-15…23 ↔ menus ↔ stores</b> all reconcile</li>
+        <li><b>All nav anchors resolve</b>; every BO packet maps to a feature/section</li>
+      </ul>
+    </div>
+    <div class="note warn" style="margin-top:12px"><b>Still open (unchanged):</b> DS7 pricing (LINE/WA per-message rate · paid seat ladders) · VAT default on/off · LINE-OA vs WA-Cloud provider · isolated-DB upgrade tier. None block the build.</div>
+  </div>
+</section>
+
+<!-- ================= §S BUILD STATE ================= -->
+<section id="ss">
+  <div class="sechead"><span class="secno">§S</span><h2>Current build state — demo shell live, engines running</h2></div>
+  <p class="secsub">As of <b>15 Jun 2026</b> a clickable demo exists in <span class="mono">v2.4.1.smbowner Platform UI (Owner Edition — multi-tenant · 3 personas)/</span> — vanilla-JS, Atelier Pastel (no drift), all three personas, with <b>live in-browser engines</b> for payroll, accounting, tax, reports, governance and the feature wave. Node smoke <b>green (233 checks</b> at last run; suite still growing — build is under active iteration). What remains is the live backend, document export, the messaging adapters, clock-in capture, the cloud-backup pipeline, the Lao pack and deployment.</p>
+  <div class="legend">
+    <span class="g"><span class="badge ok">live</span> engine runs in the demo</span>
+    <span class="g"><span class="badge warn">shell</span> UI / flag present · engine or integration later</span>
+    <span class="g"><span class="badge plain">later</span> not started</span>
+  </div>
+
+  <div class="tblwrap"><table class="tbl">
+    <thead><tr><th>Packet</th><th>Capability</th><th class="c">State</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">BO-1</td><td class="fn">Tenant spine</td><td class="c"><span class="badge warn">shell</span></td><td>in-browser multi-tenant (3 tenants + switcher); real Turso/Worker later</td></tr>
+      <tr><td class="mono">BO-2</td><td class="fn">Persona collapse</td><td class="c"><span class="badge ok">live</span></td><td>3 personas, scope, router, two-tier owner shell</td></tr>
+      <tr><td class="mono">BO-3</td><td class="fn">Owner console + dashboard</td><td class="c"><span class="badge ok">live</span></td><td>cockpit + 2.1–2.4 navigation</td></tr>
+      <tr><td class="mono">BO-4</td><td class="fn">Payroll core</td><td class="c"><span class="badge ok">live</span></td><td>vector reconciles to the kip (net 5,492,250)</td></tr>
+      <tr><td class="mono">BO-5</td><td class="fn">Leveling + lifecycle + filings</td><td class="c"><span class="badge ok">live</span></td><td>L0–L3, draft→close (immutable, one-tap, adjustment), filing CSVs</td></tr>
+      <tr><td class="mono">BO-6</td><td class="fn">Cashbook</td><td class="c"><span class="badge ok">live</span></td><td>auto-posts locked staff cost on close</td></tr>
+      <tr><td class="mono">BO-7</td><td class="fn">Tax centre</td><td class="c"><span class="badge ok">live</span></td><td>VAT/CIT/Profit-Tax, effective-dated, calendar, mark-filed</td></tr>
+      <tr><td class="mono">BO-8</td><td class="fn">Cost / benefit</td><td class="c"><span class="badge ok">live</span></td><td>rollup + 6-mo series; export <b>CSV now</b>, XLSX/PDF later</td></tr>
+      <tr><td class="mono">BO-9</td><td class="fn">LINE / WhatsApp channels</td><td class="c"><span class="badge warn">shell</span></td><td>messaging screen + <b>outbox demo</b> + quota meters + flags + channel-fee→ledger; real adapters later</td></tr>
+      <tr><td class="mono">BO-10</td><td class="fn">Capacity &amp; licenses</td><td class="c"><span class="badge warn">shell</span></td><td>Capacity screen + quota meters; enforce/billing later</td></tr>
+      <tr><td class="mono">BO-11</td><td class="fn">Platform-admin plane</td><td class="c"><span class="badge warn">shell</span></td><td>cross-tenant console, resource meters, allocation, DB ops (UI)</td></tr>
+      <tr><td class="mono">BO-12</td><td class="fn">KYC registration + activation</td><td class="c"><span class="badge warn">shell</span></td><td>review queue, Lao Coffee = pending; image upload/store later</td></tr>
+      <tr><td class="mono">BO-13</td><td class="fn">Seat caps + allocation</td><td class="c"><span class="badge warn">shell</span></td><td>seats shown; enforce-on-create later</td></tr>
+      <tr><td class="mono">BO-14</td><td class="fn">Geofenced clock-in</td><td class="c"><span class="badge warn">shell</span></td><td>geofence + punch-correction flow in UI; camera/GPS/offline capture later</td></tr>
+      <tr><td class="mono">BO-15…23</td><td class="fn">Feature wave</td><td class="c"><span class="badge ok">live</span></td><td>scheduling/swap (work.js), earned-to-date, EWA (cap + recovery), one-tap, "why this number" payslip, labour-cost; payday alert &amp; nudges → demo outbox</td></tr>
+      <tr><td class="mono">BO-24</td><td class="fn">Feature flags</td><td class="c"><span class="badge ok">live</span></td><td>hide + pause, scope-guarded, audited, per-tenant</td></tr>
+      <tr><td class="mono">BO-25</td><td class="fn">Per-tenant DB ops</td><td class="c"><span class="badge ok">live</span></td><td>owner backup/restore/export; platform reset/purge/migrate + auto-snapshot</td></tr>
+      <tr><td class="mono">BO-26</td><td class="fn">Approval engine</td><td class="c"><span class="badge ok">live</span></td><td>one engine, inbox, flag-not-block, register-by-config</td></tr>
+      <tr><td class="mono">BO-27</td><td class="fn">Weekly cloud backup</td><td class="c"><span class="badge warn">shell</span></td><td>flag + "Connect Dropbox/GDrive" + Capacity row; OAuth + cron + generate + upload later</td></tr>
+    </tbody>
+  </table></div>
+
+  <div style="height:16px"></div>
+  <div class="card">
+    <h3><span class="dot"></span>Remaining scaffold — what turns shells into product</h3>
+    <div class="grid cols-2">
+      <ul class="tick x">
+        <li><b>Live backend</b> — Turso shared DB + tenant_id + Cloudflare Worker + custody flip (flip S0 mock → remote). Realizes real isolation (BO-1), platform guard (BO-11), seat enforce (BO-13), sealed custody</li>
+        <li><b>Document export</b> — XLSX + PDF generation (CSV today). Powers BO-8 reports, the BO-27 2-page PDF, and every export</li>
+        <li><b>LINE &amp; WhatsApp adapters</b> — real send (Meta Cloud API + LINE Messaging API) + per-tenant sender model; turns the outbox into real delivery (BO-9), with budget/enforce (BO-10)</li>
+        <li><b>Clock-in capture</b> — real punch: selfie + GPS + offline queue + geofence grade (BO-14)</li>
+      </ul>
+      <ul class="tick x">
+        <li><b>Cloud-backup pipeline</b> — OAuth + weekly cron + XLS/PDF generate + upload to the chosen folder (BO-27)</li>
+        <li><b>ລາວ language pack</b> — full UI i18n (portal &amp; payslip already bilingual)</li>
+        <li><b>Deploy</b> — GitHub Pages (static) + Worker (API), per the Netlify→Cloudflare plan</li>
+        <li><b>Tidy</b> — the folder <span class="mono">README.md</span> is stale (predates the engines — it still says "engines later / 154 checks"); reality is engines live + 233 checks</li>
+      </ul>
+    </div>
+    <div class="note ok" style="margin-top:12px"><b>Reading of the recheck:</b> the hard part is done — the Lao payroll/accounting/tax math, governance and the delight wave all <b>run and reconcile</b> in the demo. What's left is wiring (backend, adapters, capture, export format) and deployment, not new logic.</div>
+  </div>
+</section>
+
+<!-- ================= §B BUILD PLAN ================= -->
+<section id="sb">
+  <div class="sechead"><span class="secno">§B</span><h2>Scaffold plan — buildable packets (BO-1…BO-26)</h2></div>
+  <p class="secsub">The split-out, copy-ready build. Each packet is self-contained — stores &amp; fields, routes, pseudocode, a smoke test — so you can hand me one at a time later, exactly like the sysmatik.2 BS-packets. §§1–11 above stay readable for non-coders; §B is for the build.</p>
+
+  <div class="card dash" style="margin-bottom:16px">
+    <h3><span class="dot"></span>S0 · Local mock first <span class="badge brand">clickable before any server</span></h3>
+    <p class="small muted">Like every release in this line: stand the whole thing up <span class="mono">file://</span> on a local mock (seeded tenant, fake LINE/WhatsApp outbox, in-browser tax tables) so the two-persona flow, payroll math and cost/benefit are clickable before a Worker or DB exists. Then flip <span class="mono">auth_mode → Edge Worker</span> and <span class="mono">tenancy → remote</span> to go live.</p>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-1</span><span class="pn">Tenant spine</span><span class="pm">db_tenant · tenant_id · guard · signup</span></div>
+    <div class="pkb">
+      <div class="lab">stores / fields</div>
+      <pre>db_tenant { id, name, entity_type[sole|company], locale[en|lo],
+            currency='LAK', plan_ref, flags{}, created, status }
++ add  tenant_id  to every operational store (index it)</pre>
+      <div class="lab">routes</div>
+      <pre><span class="route">POST /tenant/signup</span>  name,email,locale → create tenant + owner + free plan + seed
+<span class="route">GET  /tenant/me</span>      resolve from session</pre>
+      <div class="lab">guard (data layer, not callers)</div>
+      <pre>every query: WHERE tenant_id = session.tenant_id
+reject cross/empty tenant → 403 + audit tenant.cross_denied</pre>
+      <div class="lab">smoke</div>
+      <pre>two tenants, same email local-part → isolated; query of A as B → denied; purge A → B intact</pre>
+      <p class="ptr">builds on → edge.auth invite/activate · db.js stores · db_platform.flags</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-2</span><span class="pn">Persona collapse</span><span class="pm">2 shells · scope union · router</span></div>
+    <div class="pkb">
+      <div class="lab">role map</div>
+      <pre>staff  → scope[staff]                       → Staff Portal shell
+owner  → scope[manager,hr,ceo,sysadmin]    → Owner console shell</pre>
+      <div class="lab">router</div>
+      <pre>landing-from-scope: staff→/today  owner→/dashboard
+owner sees all menus (no chip-lock); staff locked to own record</pre>
+      <div class="lab">smoke</div>
+      <pre>owner login reaches 2.1–2.4 + Payroll; staff login blocked from money/settings; container-query layout 4-up/2-up</pre>
+      <p class="ptr">builds on → parent app.js router · scope rule · screens/*.js</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-3</span><span class="pn">Owner console + dashboard</span><span class="pm">2.1–2.4 mount · cockpit tiles</span></div>
+    <div class="pkb">
+      <div class="lab">screens</div>
+      <pre>owner.js: Dashboard + mounts → StaffManager, Payroll, Accounting,
+          SystemMgmt, Capacity  (each a lazy section)
+staff.js: Today, Clock, Attendance, Leave, Payslips, Inbox, Me</pre>
+      <div class="lab">dashboard tiles</div>
+      <pre>attendance(today) · payroll(due,PIT) · cash(MTD) · capacity(seats,msg,storage)
+all tenant-scoped, respect leveling</pre>
+      <div class="lab">smoke</div>
+      <pre>tiles render from seed; deep config tiles say "open on web" in 384px frame</pre>
+      <p class="ptr">builds on → BO-1, BO-2 · ui.js components · SVG charts</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-4</span><span class="pn">Payroll engine core</span><span class="pm">gross · NSSF · PIT · payslip</span></div>
+    <div class="pkb">
+      <div class="lab">stores / fields</div>
+      <pre>db_people: comp_profile{ base, allowances[], pay_freq, ss_eligible }
+db_payroll: run{ id, period, state }, slip{ uid, gross, ss_emp, ss_er,
+            taxable, pit, net, lines[] }</pre>
+      <div class="lab">calc (pure fn — table-driven from db_tax)</div>
+      <pre>gross   = base + Σallowances + OT + bonus
+ss_base = min(ss_eligible_earnings, CAP=4,500,000)
+ss_emp  = ss_base * 0.055 ;  ss_er = ss_base * 0.06
+taxable = gross - ss_emp
+pit     = Σ bracket_slice(taxable) * rate   // 0/5/10/15/20/25
+net     = gross - ss_emp - pit - other
+cost    = gross + ss_er</pre>
+      <div class="lab">test vector (must pass exactly)</div>
+      <pre>base 6,000,000 → ss_emp 247,500 · ss_er 270,000 · taxable 5,752,500
+              → pit 260,250 · net 5,492,250 · cost 6,270,000
+reconcile: net + (ss_emp+ss_er) + pit == cost  ✓</pre>
+      <p class="ptr">builds on → BO-1 · db_tax tables (BO-7) · sealed custody</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-5</span><span class="pn">Leveling + lifecycle + filings</span><span class="pm">L0–L3 · state machine · NSSF/PIT export</span></div>
+    <div class="pkb">
+      <div class="lab">leveling gate</div>
+      <pre>level ∈ {L0,L1,L2,L3} on db_tenant.flags.payroll_level
+L0 net-only · L1 +ss+pit+payslip · L2 +schedules+calendar · L3 +BIK+PT/CIT+efile</pre>
+      <div class="lab">lifecycle (no silent change)</div>
+      <pre>draft → review → approve → pay → file → close
+close = immutable; correction = adjustment_run(ref) + audit payroll.adjusted</pre>
+      <div class="lab">outputs</div>
+      <pre>payslip PDF (EN/ລາວ) · run register .xlsx · NSSF schedule · PIT withholding report · bank file · journal→db_ledger</pre>
+      <div class="lab">smoke</div>
+      <pre>L1 hides schedules; L2 shows them; close blocks edit; adjustment trails; export logs export.*</pre>
+      <p class="ptr">builds on → BO-4 · db_audit · comms (BO-9) for payslip notify</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-6</span><span class="pn">Accounting cashbook</span><span class="pm">db_ledger · entry UI · day/week/month</span></div>
+    <div class="pkb">
+      <div class="lab">stores / fields</div>
+      <pre>db_ledger { id, tenant_id, date, kind[rev|exp], category, amount,
+            tax_flag[vat_in|vat_out|exempt], method, note, receipt_ref,
+            source[manual|payroll|comms], locked }</pre>
+      <div class="lab">routes / views</div>
+      <pre><span class="route">POST /ledger/entry</span> · <span class="route">GET /ledger?range=day|week|month</span>
+auto-post hooks: payroll close → salary+ss lines ; comms send → fee line</pre>
+      <div class="lab">export</div>
+      <pre>toXlsx(view) via SheetJS ; importCsv(back-data) with dry-run</pre>
+      <div class="lab">smoke</div>
+      <pre>add rev+exp; month view sums; payroll-sourced lines appear &amp; are locked; xlsx opens</pre>
+      <p class="ptr">builds on → BO-1 · sealed custody · SheetJS</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-7</span><span class="pn">Tax centre</span><span class="pm">db_tax · VAT/PT/CIT/PIT/NSSF · calendar</span></div>
+    <div class="pkb">
+      <div class="lab">stores / fields</div>
+      <pre>db_tax { tables: { pit_brackets[], ss{er,ee,cap}, vat, pt{1,2,3}, cit }
+         effective_from ;  periods[ {type, due, amount, status} ] }</pre>
+      <div class="lab">entity switch</div>
+      <pre>db_tenant.entity_type → sole: Profit Tax(rev%) | company: CIT(profit)
+tax centre renders only the applicable regime</pre>
+      <div class="lab">calendar</div>
+      <pre>monthly PIT+NSSF · periodic VAT · annual PT/CIT
+each = checklist item w/ pre-computed figure + mark-filed → audit tax.filed</pre>
+      <div class="lab">smoke</div>
+      <pre>edit a rate → new effective row, old run unchanged; sole vs company shows right taxes; calendar lists dues</pre>
+      <p class="ptr">builds on → BO-4 (consumes tables) · BO-6 (VAT from ledger)</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-8</span><span class="pn">Cost &amp; benefit</span><span class="pm">monthly rollup · staff-cost link · P&amp;L-lite · xlsx</span></div>
+    <div class="pkb">
+      <div class="lab">derive (replay into dw_reports)</div>
+      <pre>month_rollup(tenant, m) = {
+  revenue   = Σ ledger.rev
+  staff_cost= Σ payroll.cost (gross+ss_er)   // the linkage
+  other_exp = Σ ledger.exp(non-payroll)
+  result    = revenue - staff_cost - other_exp
+  margin = result/revenue ; cost_per_head = staff_cost/headcount }</pre>
+      <div class="lab">views</div>
+      <pre>P&amp;L-lite · rev-vs-staffcost trend · margin series · cost-per-head (SVG)
+export → one .xlsx, tab per report</pre>
+      <div class="lab">smoke</div>
+      <pre>seed a month → result &amp; ratios match hand-calc; payroll close changes staff_cost live; workbook has all tabs</pre>
+      <p class="ptr">builds on → BO-5, BO-6 · dw_reports projector</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-9</span><span class="pn">Comms channels</span><span class="pm">LINE · WhatsApp adapters · templates · meter hooks</span></div>
+    <div class="pkb">
+      <div class="lab">adapters (in the Worker, like the mailer)</div>
+      <pre>line.send(to, msg)      // LINE Messaging API
+wa.send(to, template)   // WhatsApp Cloud API
+db_comms.channels += [line, whatsapp] ; templates bilingual EN/ລາວ</pre>
+      <div class="lab">send path (metered)</div>
+      <pre>send(tpl, ch) → if ch metered: check db_license.quota[ch]>0
+  debit 1 → adapter.send → log db_comms.sent → post fee db_ledger
+  on quota low → alert owner ; on fail → retry/fallback channel</pre>
+      <div class="lab">smoke</div>
+      <pre>mock outbox in S0; quota debits; fee line posts; bilingual render; fallback on fail</pre>
+      <p class="ptr">builds on → parent comms cell + mailer · BO-6 (fee) · BO-10 (quota)</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-10</span><span class="pn">Capacity &amp; licenses</span><span class="pm">db_license · meters · enforce · billing-ready</span></div>
+    <div class="pkb">
+      <div class="lab">stores / fields</div>
+      <pre>db_license { tenant_id, plan, seats_limit, quota{ line, whatsapp,
+             storage }, usage{...}, addons[], cycle_start }</pre>
+      <div class="lab">enforce + surface</div>
+      <pre>seat add → check seats_limit ; msg send → check quota (BO-9)
+2.4 screens: meters (used/limit), top-up, upgrade, usage statement
+limit hit → audit license.* + owner alert (non-blocking for punches)</pre>
+      <div class="lab">smoke</div>
+      <pre>exceed seats → blocked w/ upgrade prompt; quota top-up restores send; usage statement totals match db_comms</pre>
+      <p class="ptr">builds on → BO-1 · BO-9 · db_audit · DS7 numbers (yours)</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-11</span><span class="pn">Platform-admin plane</span><span class="pm">cross-tenant scope · inverted guard · console</span></div>
+    <div class="pkb">
+      <div class="lab">scope / guard inversion</div>
+      <pre>scope[platform_admin], session.tenant_id = null
+guard: platform reads ACROSS tenants BUT sealed stores
+       (payroll/ledger/tax/registration/identity) → metadata only
+       content access = break_glass(reason) + audit platform.glass</pre>
+      <div class="lab">routes</div>
+      <pre><span class="route">GET /platform/tenants</span> · <span class="route">GET /platform/tenant/:id/resources</span>
+<span class="route">POST /platform/tenant/:id/{suspend|reactivate|terminate}</span></pre>
+      <div class="lab">smoke</div>
+      <pre>operator lists all tenants; resource counts show; salary/ledger content blocked (metadata ok); suspend flips tenant offline; every act audited</pre>
+      <p class="ptr">builds on → BO-1 · db_identity (platform accounts) · db_audit</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-12</span><span class="pn">KYC registration + activation</span><span class="pm">db_registration · review queue · provision-on-activate</span></div>
+    <div class="pkb">
+      <div class="lab">stores / fields</div>
+      <pre>db_registration { id, tenant_id, email, phone, id_card_ref, selfie_ref,
+                  status[pending|active|rejected], reviewer, decided, reason }
+  (sealed · encrypted at rest · access logged kyc.*)</pre>
+      <div class="lab">routes</div>
+      <pre><span class="route">POST /register</span>   company,email,phone,id_card,selfie → tenant(pending)
+<span class="route">GET  /platform/registrations</span>            review queue
+<span class="route">POST /platform/tenant/:id/activate</span>     → provision (BO-1 seed + seats)
+<span class="route">POST /platform/tenant/:id/reject</span>       reason → notify</pre>
+      <div class="lab">smoke</div>
+      <pre>register → pending, nothing operational; activate → seeded+seats+owner invite; reject → reason logged; KYC view time-boxed &amp; audited</pre>
+      <p class="ptr">builds on → BO-1, BO-11 · parent invite/activate · sealed custody</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-13</span><span class="pn">Seat caps + allocation</span><span class="pm">buckets 10/3/1 · enforce · platform allocate</span></div>
+    <div class="pkb">
+      <div class="lab">fields</div>
+      <pre>db_license.seats = { staff:10, manager:3, admin:1 }   // free/locked tier
+usage computed from db_identity accounts by role</pre>
+      <div class="lab">enforce + allocate</div>
+      <pre>account create → if role bucket full → block + "upgrade/ask operator"
+<span class="route">POST /platform/tenant/:id/allocate</span>  { seats?, quotas?, plan? }
+owner sees caps (2.4) read-only; platform sets them</pre>
+      <div class="lab">smoke</div>
+      <pre>11th staff blocked; 4th manager blocked; operator raises staff→15, 11th now ok; downgrade respects existing</pre>
+      <p class="ptr">builds on → BO-1, BO-11 · BO-10 meters · db_identity roles</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-14</span><span class="pn">Geofenced clock-in</span><span class="pm">manager pin + radius (30 m) · verify · grade</span></div>
+    <div class="pkb">
+      <div class="lab">fields</div>
+      <pre>db_tenant.sites[] = { name, lat, lng, radius_m: 30 }   // adjustable
+(or db_punch_policy.ch_geofence when sysmatik add-on on)</pre>
+      <div class="lab">verify on punch (never blocks)</div>
+      <pre>fix = best_accuracy(selfie_exif_gps, device_gps)
+d = haversine(fix, site.pin)
+grade = d &lt;= site.radius_m ? evidence : flag   // flag = record-only
+save punch always; flag → review queue</pre>
+      <div class="lab">smoke</div>
+      <pre>set radius 30; punch inside→evidence; 50 m out→flag (still saved); no-GPS→flag; radius slider 10–500 persists</pre>
+      <p class="ptr">builds on → BO-3 · §3 punch · db_time · review queue</p>
+    </div>
+  </div>
+
+  <div class="card dash" style="margin:6px 0 14px"><h3><span class="dot"></span>§W feature wave — BO-15…BO-23 <span class="badge brand">committed selection</span></h3><p class="small muted">The nine features ticked from the competitive report. Compact packets — same shape, hand one at a time.</p></div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-15</span><span class="pn">Scheduling / roster upgrade</span><span class="pm">db_workflow · templates · publish</span></div>
+    <div class="pkb">
+      <div class="lab">stores / fields</div>
+      <pre>db_workflow.shift { id, tenant_id, uid?, site, start, end, role,
+                    status[open|assigned|published] } + roster templates</pre>
+      <div class="lab">routes</div>
+      <pre><span class="route">POST /schedule/shift</span> · <span class="route">POST /schedule/publish</span> · <span class="route">GET /schedule?week</span></pre>
+      <div class="lab">smoke</div>
+      <pre>build week from template → publish → staff see their shifts; OT guardrail warns on overload</pre>
+      <p class="ptr">builds on → BO-3 · parent request ledger</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-16</span><span class="pn">Shift swap &amp; open-shift</span><span class="pm">request → approve · OT-guarded</span></div>
+    <div class="pkb">
+      <div class="lab">fields</div>
+      <pre>db_workflow.req { type[swap|claim], shift_id, from_uid, to_uid?, status }</pre>
+      <div class="lab">routes</div>
+      <pre><span class="route">POST /schedule/swap</span> · <span class="route">POST /schedule/claim</span> · <span class="route">POST /schedule/approve</span></pre>
+      <div class="lab">smoke</div>
+      <pre>staff swaps → owner approves → roster updates; claim open shift; a swap that breaks ≤3h/day or ≤45h/mo is flagged, never auto-applied</pre>
+      <p class="ptr">builds on → BO-15 · §W guardrails</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-17</span><span class="pn">Earned-to-date tracker</span><span class="pm">derived · powers EWA cap</span></div>
+    <div class="pkb">
+      <div class="lab">derive</div>
+      <pre>etd_gross = Σ(days_worked × daily_rate + approved_OT)
+etd_net   = etd_gross − running(NSSF_ee + PIT accrual)   // live from db_time × comp</pre>
+      <div class="lab">route</div>
+      <pre><span class="route">GET /pay/earned-to-date</span></pre>
+      <div class="lab">smoke</div>
+      <pre>punches accrue etd; matches hand-calc; value caps the EWA draw (BO-20)</pre>
+      <p class="ptr">builds on → BO-4 · db_time</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-18</span><span class="pn">Crystal-clear bilingual payslip</span><span class="pm">"why this number" · EN/ລາວ</span></div>
+    <div class="pkb">
+      <div class="lab">view</div>
+      <pre>slip detail: each line (gross → NSSF → PIT → net) expandable with a plain
+EN/ລາວ explanation; PDF + on-screen</pre>
+      <div class="lab">route</div>
+      <pre><span class="route">GET /pay/slip/:id?explain=1</span></pre>
+      <div class="lab">smoke</div>
+      <pre>every line expands bilingually; totals reconcile to BO-4 vector (net 5,492,250)</pre>
+      <p class="ptr">builds on → BO-4 · i18n</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-19</span><span class="pn">Instant payday / payslip alert</span><span class="pm">hook → comms · metered fallback</span></div>
+    <div class="pkb">
+      <div class="lab">hook</div>
+      <pre>on payroll.paid / slip_ready → comms.send(payday_ready, channel)
+free: in-app + email ; metered: LINE/WA (debits quota, BO-9/BO-10)</pre>
+      <div class="lab">smoke</div>
+      <pre>pay run paid → alert queued; LINE send debits quota; on cap → falls back to in-app+email (never silently lost)</pre>
+      <p class="ptr">builds on → BO-5 · BO-9 · BO-19 templates</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-20</span><span class="pn">Earned-wage access (EWA)</span><span class="pm">advance ≤50% etd · payday recovery</span></div>
+    <div class="pkb">
+      <div class="lab">fields / rule</div>
+      <pre>db_payroll.advance { id, uid, amount, approved_by, drawn_at, recover_run, status }
+rule: amount ≤ cap (default 0.5 × etd_net) ; recovered as a deduction line next run</pre>
+      <div class="lab">routes</div>
+      <pre><span class="route">POST /pay/advance/request</span> · <span class="route">/approve</span> · <span class="route">/payout</span>  (auto-recover in run)</pre>
+      <div class="lab">smoke</div>
+      <pre>request &gt; cap blocked; approve → payout; next run deducts &amp; reconciles; sealed + audited; never blocks the run</pre>
+      <p class="ptr">builds on → BO-17 (cap) · BO-4 (recovery) · sealed custody</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-21</span><span class="pn">One-tap payroll run</span><span class="pm">lifecycle compressed · guardrailed</span></div>
+    <div class="pkb">
+      <div class="lab">route</div>
+      <pre><span class="route">POST /pay/run/oneclick</span> → draft → (preview) → approve → pay → file
+halts at review if any unresolved exception; closed run immutable</pre>
+      <div class="lab">smoke</div>
+      <pre>clean month one-tap completes &amp; files; an unresolved exception stops at review; fixes only via adjustment run</pre>
+      <p class="ptr">builds on → BO-5 lifecycle</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-22</span><span class="pn">Compliance-calendar nudges</span><span class="pm">db_tax due → reminder + figure</span></div>
+    <div class="pkb">
+      <div class="lab">flow</div>
+      <pre>scan db_tax.periods.due → comms.send(tax_due, figure) in-app + optional LINE
+<span class="route">POST /tax/period/:id/filed</span> → audit tax.filed, stop nudging</pre>
+      <div class="lab">smoke</div>
+      <pre>due in 3 days → nudge carries pre-computed amount; mark filed → no more nudges; logged</pre>
+      <p class="ptr">builds on → BO-7 calendar · BO-9 comms</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-23</span><span class="pn">Live labour-cost vs revenue</span><span class="pm">dashboard tile · today</span></div>
+    <div class="pkb">
+      <div class="lab">derive</div>
+      <pre>today_wage = Σ prorate(gross + employer_NSSF) from today's punches
+today_rev  = Σ db_ledger.rev(today) ;  margin = (rev − wage)/rev</pre>
+      <div class="lab">route</div>
+      <pre><span class="route">GET /dash/labour-cost?range=today|week|month</span></pre>
+      <div class="lab">smoke</div>
+      <pre>a punch and a sale move the tile; margin matches hand-calc; month view ties to §6 cost/benefit</pre>
+      <p class="ptr">builds on → BO-6 ledger · BO-8 rollup</p>
+    </div>
+  </div>
+
+  <div class="card dash" style="margin:6px 0 14px"><h3><span class="dot"></span>Controls &amp; governance — BO-24…BO-26 <span class="badge brand">§F · §D · §A</span></h3><p class="small muted">Cross-cutting: the feature switchboard, per-tenant DB ops, and the one approval engine behind every flow.</p></div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-24</span><span class="pn">Feature flags (enable/disable)</span><span class="pm">db_tenant.flags · owner/mgr scope</span></div>
+    <div class="pkb">
+      <div class="lab">fields</div>
+      <pre>db_tenant.flags { feature: on|off } ; registry: feature → {core?, toggle_scope[owner|manager]}
+core features have no toggle</pre>
+      <div class="lab">routes / guard</div>
+      <pre><span class="route">POST /flags/:feature</span> {on}  → if core: 403 ; if toggle_scope=owner &amp; caller=mgr: 403
+effect: hide menu + pause engine, retain data ; audit flag.set</pre>
+      <div class="lab">smoke</div>
+      <pre>toggle off → menu hidden, rows kept; re-enable restores; manager blocked from owner-only flag; per-tenant (A off ≠ B)</pre>
+      <p class="ptr">builds on → BO-1 · BO-2 scope rule · §F</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-25</span><span class="pn">Per-tenant DB ops</span><span class="pm">owner backup/restore · platform reset/control</span></div>
+    <div class="pkb">
+      <div class="lab">owner (own tenant)</div>
+      <pre><span class="route">POST /db/backup</span> {scope: now|schedule|module} · <span class="route">/db/restore</span> · <span class="route">/db/export</span>
+all forced WHERE tenant_id = session.tenant_id (backup ladder from parent)</pre>
+      <div class="lab">platform (any tenant, one at a time)</div>
+      <pre><span class="route">POST /platform/tenant/:id/db/{reset|purge|migrate|snapshot|restore}</span>
+auto-snapshot before destructive ; confirm + reason ; audit platform.db.*</pre>
+      <div class="lab">smoke</div>
+      <pre>owner backs up &amp; restores own; cross-tenant denied; platform reset A → B &amp; C intact; snapshot precedes purge</pre>
+      <p class="ptr">builds on → BO-1 · BO-11 · §D matrix</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-26</span><span class="pn">Approval engine</span><span class="pm">one primitive · flag-not-block</span></div>
+    <div class="pkb">
+      <div class="lab">model</div>
+      <pre>approvable { type, payload, checks[], approver_scope, state[pending|approved|rejected] }
+flow = request → run checks → decision → outcome + audit
+worker-protecting checks (geofence/OT/punch) set grade=flag, never block</pre>
+      <div class="lab">routes</div>
+      <pre><span class="route">GET /approve/inbox</span> · <span class="route">POST /approve/:id</span> {decision, reason}</pre>
+      <div class="lab">smoke</div>
+      <pre>register a new approvable type by config (no new code); the 12 §A flows run on it; inbox shows pending; flag-not-block honored; decisions audited</pre>
+      <p class="ptr">builds on → BO-2 scope · db_workflow · db_audit · §A</p>
+    </div>
+  </div>
+
+  <div class="packet">
+    <div class="pkh"><span class="ptag">BO-27</span><span class="pn">Weekly cloud backup &amp; reports</span><span class="pm">Dropbox/GDrive · XLS + PDF · cron</span></div>
+    <div class="pkb">
+      <div class="lab">integration / fields</div>
+      <pre>db_tenant.integrations {
+  dropbox{ token_ref, folder_id }, gdrive{ token_ref, folder_id },   // tokens sealed (vault)
+  schedule{ weekday, time }, last_run{ at, status } }</pre>
+      <div class="lab">pipeline (platform cron, daily sweep)</div>
+      <pre>for tenant where schedule.due &amp; flag.cloud_backup=on:
+   xls = buildXLS(all user fields + weekly stats)               // SheetJS
+   pdf = buildPDF(p1 staff behaviour table+graph, p2 rev/exp table+chart)
+   upload(dropbox, gdrive, folder) → log export.* → set last_run
+   on fail → retry ×N → alert owner (in-app/email)</pre>
+      <div class="lab">routes</div>
+      <pre><span class="route">POST /backup/cloud/connect</span> {provider} (OAuth) · <span class="route">/folder</span> · <span class="route">/schedule</span> · <span class="route">/run-now</span></pre>
+      <div class="lab">smoke</div>
+      <pre>connect Dropbox+GDrive (mock) → pick folder → run-now → XLS + 2-page PDF land in folder; export logged; fail path retries + alerts; owner-only + flag-gated + off by default</pre>
+      <p class="ptr">builds on → BO-1 · BO-8 (report data) · BO-25 (backup) · BO-24 (flag) · §W #10</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h3><span class="dot"></span>Phase line — one dependency order</h3>
+    <div class="phase">
+      <div class="phead"><span class="pno">P0</span><span class="pt">Control plane</span><span class="pm">BO-11 · BO-12 · BO-13</span></div>
+      <div class="tblwrap"><table class="tbl"><tbody><tr><td>Platform-admin persona, KYC register + manual activation, seat allocation (10/3/1). Gates real onboarding; can run in parallel to P1 on the S0 mock (mock seeds tenants directly).</td></tr></tbody></table></div>
+    </div>
+    <div class="phase">
+      <div class="phead"><span class="pno">P1</span><span class="pt">Spine &amp; shells</span><span class="pm">BO-1 · BO-2 · BO-3 · BO-14</span></div>
+      <div class="tblwrap"><table class="tbl"><tbody><tr><td>Tenant isolation, the two in-shop personas, owner console + dashboard, and geofenced punch — on the S0 mock. Nothing statutory yet — prove the frame.</td></tr></tbody></table></div>
+    </div>
+    <div class="phase">
+      <div class="phead"><span class="pno">P2</span><span class="pt">Money engines</span><span class="pm">BO-7 · BO-4 · BO-5 · BO-6</span></div>
+      <div class="tblwrap"><table class="tbl"><tbody><tr><td>Tax tables first, then payroll core (test vector must pass), then leveling/lifecycle/filings, then the cashbook it posts into.</td></tr></tbody></table></div>
+    </div>
+    <div class="phase">
+      <div class="phead"><span class="pno">P3</span><span class="pt">Insight &amp; reach</span><span class="pm">BO-8 · BO-9 · BO-10</span></div>
+      <div class="tblwrap"><table class="tbl"><tbody><tr><td>Cost/benefit rollup, then LINE/WhatsApp channels, then the capacity meters that govern them. Flip to remote Worker + Turso to ship.</td></tr></tbody></table></div>
+    </div>
+    <div class="phase">
+      <div class="phead"><span class="pno">P4</span><span class="pt">Feature wave (§W)</span><span class="pm">BO-15 … BO-23</span></div>
+      <div class="tblwrap"><table class="tbl"><tbody><tr><td>The committed delighters, once the core stands: scheduling + swap (BO-15/16), pay transparency &amp; EWA (BO-17/18/20), payday alert (BO-19), one-tap run (BO-21), compliance nudges (BO-22), live labour-cost (BO-23). Each rides an engine an earlier phase already built.</td></tr></tbody></table></div>
+    </div>
+    <div class="phase">
+      <div class="phead"><span class="pno">P5</span><span class="pt">Controls &amp; governance</span><span class="pm">BO-24 · BO-25 · BO-26</span></div>
+      <div class="tblwrap"><table class="tbl"><tbody><tr><td>Cross-cutting, land alongside: the feature switchboard (BO-24, needed as soon as optional features exist), per-tenant DB ops (BO-25, owner backup + platform control), and the approval engine (BO-26) that the §A flows and every earlier approve-step run on.</td></tr></tbody></table></div>
+    </div>
+    <div class="note ok" style="margin-top:6px"><b>Hand me one packet at a time</b> when you're ready to build — each is scoped to land green on its own smoke test, exactly like the BS-packets in sysmatik.2. Recommended first: <b>BO-1</b> (tenant spine) then <b>BO-4</b> (payroll core) — the two that prove the whole thesis; add <b>BO-11 + BO-12</b> when you want real KYC onboarding instead of mock-seeded tenants.</div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot"><div class="wrap">
+  Adeptio Adaptive HR — Structure Blueprint <b>v2.4.1.SmbOwner</b> · Owner Edition · branch of v2.4.1, beside <span class="mono">.edge.auth</span> and <span class="mono">.sysmatik</span>. Design tokens identical to the series (Atelier Pastel — no drift). Statutory figures current to June 2026; tax tables are owner-editable and effective-dated, not hard-coded. Not legal or tax advice — confirm rates with Lao counsel / the Tax Department before filing.
+</div></footer>
+
+</body>
+</html>
