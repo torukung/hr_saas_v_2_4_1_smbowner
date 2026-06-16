@@ -2233,15 +2233,19 @@ window.SCR_STAFF = (function () {
   /* ---------------- web ---------------- */
   const web = {
     today() {
+      const sw = (window.APPROVALS && APPROVALS.get("phoungern", "AP-243")) || null;
+      const swBadge = sw ? (sw.state === "pending" ? `<span class="badge warn">pending</span>` : badge(sw.state === "approved" ? "approved" : "plain")) : `<span class="badge warn">pending</span>`;
+      const adv = (window.PAYROLL && PAYROLL.getAdvances("phoungern").find(a => a.uid === (me() && me().id))) || null;
+      const pub = window.WORK && WORK.isPublished("phoungern");
       return {
         title: "Good morning, Khamla", sub: "Tuesday · 15 June 2026 · Phoungern Co.",
         body: `
         <div class="grid cols-3" style="margin-bottom:16px">
           ${kpi("This week", "32.5<small> h</small>", `<span class="up">on track</span> · 6 shifts`)}
           ${kpi("Leave balance", "8.0<small> days</small>", "annual · 1.5 used")}
-          ${kpi("Next pay", kip(slip.net), "<span class='badge ok'>25 Jun</span>")}
+          ${kpi("Next shift", "Wed 09:00", "Floor · this week")}
         </div>
-        <div class="grid cols-2">
+        <div class="grid cols-2" style="margin-bottom:16px">
           ${card("Clock", `
             <div class="clock-hero">
               <div class="ch-line">
@@ -2255,6 +2259,19 @@ window.SCR_STAFF = (function () {
           rowitem({ icon: "calendar", title: "Shift reminder · tomorrow 09:00", sub: "via LINE", neutral: true }),
           rowitem({ icon: "megaphone", title: "Owner: Songkran roster posted", sub: "2 days ago", neutral: true })
         ]), { icon: "inbox", link: "staff/web/inbox", linkLabel: "Inbox" })}
+        </div>
+        <div class="grid cols-2">
+          ${card("Shift line-up", `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">${pub ? badge("published") : `<span class="badge warn">draft</span>`}<span class="small muted">${pub ? "Roster is live — your week below" : "Owner hasn't published the week yet"}</span></div>` + rowlist([
+          rowitem({ icon: "calendar", title: "Mon · 09:00–18:00", sub: "Floor", side: badge("published") }),
+          rowitem({ icon: "calendar", title: "Wed · 09:00–18:00", sub: "Floor · 1 open shift", side: `<button class="btn xs soft">Claim</button>` }),
+          rowitem({ icon: "swap", title: "Thu 18 · swap → Souphaphone", sub: "your request", side: swBadge })
+        ]), { icon: "calendar", link: "staff/web/schedule", linkLabel: "Schedule" })}
+          ${card("Approval status", rowlist([
+          rowitem({ icon: "calCheck", title: "Leave · Annual 3 days", sub: "22–24 Jun", side: badge("approved") }),
+          rowitem({ icon: "swap", title: "Shift swap · Thu 18", sub: "→ Souphaphone", side: swBadge }),
+          adv ? rowitem({ icon: "wallet", title: "Advance · " + kip(adv.amount), sub: "earned-wage access", side: adv.status === "requested" ? `<span class="badge warn">pending</span>` : badge(adv.status === "paid" ? "ok" : adv.status === "approved" ? "approved" : "plain") })
+            : rowitem({ icon: "wallet", title: "No advance requested", sub: "request from My pay", neutral: true, side: badge("plain") })
+        ]), { icon: "check" })}
         </div>`
       };
     },
@@ -2339,8 +2356,8 @@ window.SCR_STAFF = (function () {
         actions: `<button class="btn ghost sm">${icon("download")} Payslip PDF</button>`,
         body: `
         <div class="grid cols-3" style="margin-bottom:16px">
-          ${FLAGS.on("phoungern", "etd") ? kpi("Earned to date", kip(etd.etdNet), etd.daysWorked + " of " + etd.workdays + " days · live", { hero: true }) : kpi("Earned to date", "—", "tracker off in Functions")}
-          ${kpi("Last net pay", kip(slip.net), "May · paid ✓")}
+          ${kpi("Next pay", kip(slip.net), `<span class="badge ok">25 Jun</span> · last: May ✓`, { hero: true })}
+          ${FLAGS.on("phoungern", "etd") ? kpi("Earned to date", kip(etd.etdNet), etd.daysWorked + " of " + etd.workdays + " days · live") : kpi("Earned to date", "—", "tracker off in Functions")}
           ${kpi("YTD net", kip(27040000), "Jan–May 2026")}
         </div>
         ${ewaOn ? `<div class="seal-note" style="margin-bottom:16px">${icon("wallet")} <div><b>Earned-wage access is on.</b> Draw up to <b>${kip(etd.cap)}</b> (≤50% of earned-to-date), recovered from your next payslip. <button class="btn xs soft" data-act="ewa:request" style="margin-left:6px">${icon("wallet")} Request advance</button></div></div>` : ""}
@@ -2439,7 +2456,7 @@ window.SCR_STAFF = (function () {
     },
     pay() {
       return {
-        title: "Pay", body: `${kpi("Last net pay", kip(slip.net), "May · paid ✓")}
+        title: "Pay", body: `${kpi("Next pay", kip(slip.net), "25 Jun · ready", { hero: true })}
         ${card("June payslip", `<div class="tablewrap"><table class="tbl"><tbody>
           <tr><td>Gross</td><td class="r num">${kip(slip.gross)}</td></tr>
           <tr><td>− NSSF</td><td class="r num neg">−247,500</td></tr>
