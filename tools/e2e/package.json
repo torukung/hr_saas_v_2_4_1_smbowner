@@ -1,0 +1,14 @@
+{
+  "name": "smbowner-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright end-to-end suite for Adeptio Owner Edition v2.4.1.smbowner — crawl, per-persona flows, DB-store persistence. Extends tools/smoke.js into a live browser.",
+  "scripts": {
+    "test": "node e2e.mjs",
+    "report": "node e2e.mjs && echo 'See report.md'"
+  },
+  "dependencies": {
+    "playwright": "1.60.0"
+  }
+}

@@ -1,0 +1,1218 @@
+{
+  "app": "v2.4.1.smbowner",
+  "startedAt": "2026-06-16T06:32:11.584Z",
+  "counts": {
+    "pass": 182,
+    "fail": 5
+  },
+  "findings": [
+    {
+      "severity": "HIGH",
+      "area": "auth",
+      "title": "cross-persona access blocked (scope guard)",
+      "detail": "staff tried owner; ended at hash=#/owner/web/dashboard",
+      "shot": "01-auth_cross_persona_access_blocked_scope_guard_.png"
+    },
+    {
+      "severity": "HIGH",
+      "area": "flow-owner",
+      "title": "tax mark-filed persists to db_tax",
+      "detail": "filed=false",
+      "shot": "02-flow_owner_tax_mark_filed_persists_to_db_tax.png"
+    },
+    {
+      "severity": "HIGH",
+      "area": "flow-owner",
+      "title": "feature flag toggle persists + reveals gated menu",
+      "detail": "ewa false→false, Advances in rail=false",
+      "shot": "03-flow_owner_feature_flag_toggle_persists_reveals_gated_menu.png"
+    },
+    {
+      "severity": "HIGH",
+      "area": "flow-staff",
+      "title": "menu reachable: today",
+      "detail": "title=\"\"",
+      "shot": "04-flow_staff_menu_reachable_today.png"
+    },
+    {
+      "severity": "HIGH",
+      "area": "flow-staff",
+      "title": "staff primary flow \"Clock in\" is a dead-end",
+      "detail": "The \"Selfie & clock in\" punch button on /staff/web/clock has no data-act/data-go handler — clicking it does nothing, so a staff member cannot complete the core clock-in action. No db_time write occurs.",
+      "shot": "05-flow_staff_clock_in_deadend.png"
+    },
+    {
+      "severity": "MEDIUM",
+      "area": "dead-buttons",
+      "title": "33 inert controls across 19 screens",
+      "detail": "Buttons with no data-act/data-go/href that do nothing when clicked (demo-shell stubs). Examples — staff/today: \"Claim\" · staff/clock: \"Selfie & clock in\" · staff/attendance: \"Request a fix\" · staff/leave: \"Request leave\" · staff/schedule: \"Claim\", \"Claim\", \"Claim\", \"Offer Thu 18 to a teammate\" · staff/pay: \"Payslip PDF\" … (full list in results.json).",
+      "shot": null
+    },
+    {
+      "severity": "INFO",
+      "area": "crawl",
+      "title": "screen hidden by feature flag: /owner/web/advances",
+      "detail": "\"advances\" is gated off by default (FLAGS) — direct hash redirects to the persona landing. Expected behavior.",
+      "shot": null
+    },
+    {
+      "severity": "INFO",
+      "area": "flow-staff",
+      "title": "staff persona has no persisting create/edit/save in this build",
+      "detail": "All staff action buttons (Clock in, Request leave, Claim shift, Request a fix, Change password) are inert demo stubs; the only state-changing staff action (EWA request) is hidden unless the owner enables the EWA flag. Staff is effectively read-only this pass.",
+      "shot": null
+    },
+    {
+      "severity": "INFO",
+      "area": "flow-platform",
+      "title": "empty KYC queue handled without crash",
+      "detail": "Could not reproduce the empty(...) ReferenceError — verify manually.",
+      "shot": null
+    },
+    {
+      "severity": "INFO",
+      "area": "persistence",
+      "title": "all \"DB stores\" are in-memory only this pass (reset on reload)",
+      "detail": "Per the README, the live DB/Worker is a later pass. Every persistence assertion above verifies the in-session engine state (db_ledger, db_payroll, db_tax, db_workflow, db_registration …). A browser reload discards all saves — expected for this build, noted so \"persisted\" is read as in-session.",
+      "shot": null
+    },
+    {
+      "severity": "INFO",
+      "area": "crawl",
+      "title": "task brief said \"4 personas + 3 sign-in portals\"",
+      "detail": "App ships 3 persona shells (Staff · Owner · Platform) + a 4th delegated role (Manager) that rides the Owner shell with a subset, and 3 sign-in portal frames. So \"4 personas / 3 portals\" reconciles to 3 shells (3 portal frames) + Manager-on-Owner.",
+      "shot": null
+    }
+  ],
+  "crawl": [
+    {
+      "hash": "/staff/web/today",
+      "persona": "staff",
+      "device": "web",
+      "screen": "today",
+      "isHidden": false,
+      "expectedTitle": "Good morning, Khamla",
+      "renderedTitle": "Good morning, Khamla",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/web/clock",
+      "persona": "staff",
+      "device": "web",
+      "screen": "clock",
+      "isHidden": false,
+      "expectedTitle": "Clock in / out",
+      "renderedTitle": "Clock in / out",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/web/attendance",
+      "persona": "staff",
+      "device": "web",
+      "screen": "attendance",
+      "isHidden": false,
+      "expectedTitle": "My attendance",
+      "renderedTitle": "My attendance",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/web/leave",
+      "persona": "staff",
+      "device": "web",
+      "screen": "leave",
+      "isHidden": false,
+      "expectedTitle": "Leave",
+      "renderedTitle": "Leave",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/web/schedule",
+      "persona": "staff",
+      "device": "web",
+      "screen": "schedule",
+      "isHidden": false,
+      "expectedTitle": "My schedule",
+      "renderedTitle": "My schedule",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/web/pay",
+      "persona": "staff",
+      "device": "web",
+      "screen": "pay",
+      "isHidden": false,
+      "expectedTitle": "My pay",
+      "renderedTitle": "My pay",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/web/documents",
+      "persona": "staff",
+      "device": "web",
+      "screen": "documents",
+      "isHidden": false,
+      "expectedTitle": "My documents",
+      "renderedTitle": "My documents",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/web/inbox",
+      "persona": "staff",
+      "device": "web",
+      "screen": "inbox",
+      "isHidden": false,
+      "expectedTitle": "Inbox",
+      "renderedTitle": "Inbox",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/web/me",
+      "persona": "staff",
+      "device": "web",
+      "screen": "me",
+      "isHidden": false,
+      "expectedTitle": "Me",
+      "renderedTitle": "Me",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/dashboard",
+      "persona": "owner",
+      "device": "web",
+      "screen": "dashboard",
+      "isHidden": false,
+      "expectedTitle": "Phoungern Co.",
+      "renderedTitle": "Phoungern Co.",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/people",
+      "persona": "owner",
+      "device": "web",
+      "screen": "people",
+      "isHidden": false,
+      "expectedTitle": "People",
+      "renderedTitle": "People",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/attendance",
+      "persona": "owner",
+      "device": "web",
+      "screen": "attendance",
+      "isHidden": false,
+      "expectedTitle": "Attendance",
+      "renderedTitle": "Attendance",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/scheduling",
+      "persona": "owner",
+      "device": "web",
+      "screen": "scheduling",
+      "isHidden": false,
+      "expectedTitle": "Scheduling",
+      "renderedTitle": "Scheduling",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/leave",
+      "persona": "owner",
+      "device": "web",
+      "screen": "leave",
+      "isHidden": false,
+      "expectedTitle": "Leave",
+      "renderedTitle": "Leave",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/messaging",
+      "persona": "owner",
+      "device": "web",
+      "screen": "messaging",
+      "isHidden": false,
+      "expectedTitle": "Messaging & content",
+      "renderedTitle": "Messaging & content",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/access",
+      "persona": "owner",
+      "device": "web",
+      "screen": "access",
+      "isHidden": false,
+      "expectedTitle": "Access & invites",
+      "renderedTitle": "Access & invites",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/approvals",
+      "persona": "owner",
+      "device": "web",
+      "screen": "approvals",
+      "isHidden": false,
+      "expectedTitle": "Approvals",
+      "renderedTitle": "Approvals",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/pay-runs",
+      "persona": "owner",
+      "device": "web",
+      "screen": "pay-runs",
+      "isHidden": false,
+      "expectedTitle": "Pay runs",
+      "renderedTitle": "Pay runs",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/components",
+      "persona": "owner",
+      "device": "web",
+      "screen": "components",
+      "isHidden": false,
+      "expectedTitle": "Components",
+      "renderedTitle": "Components",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/advances",
+      "persona": "owner",
+      "device": "web",
+      "screen": "advances",
+      "isHidden": true,
+      "expectedTitle": "Advances (EWA)",
+      "renderedTitle": "Phoungern Co.",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/statutory",
+      "persona": "owner",
+      "device": "web",
+      "screen": "statutory",
+      "isHidden": false,
+      "expectedTitle": "Statutory",
+      "renderedTitle": "Statutory",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/payslips",
+      "persona": "owner",
+      "device": "web",
+      "screen": "payslips",
+      "isHidden": false,
+      "expectedTitle": "Payslips",
+      "renderedTitle": "Payslips",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/leveling",
+      "persona": "owner",
+      "device": "web",
+      "screen": "leveling",
+      "isHidden": false,
+      "expectedTitle": "Leveling",
+      "renderedTitle": "Leveling",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/cashbook",
+      "persona": "owner",
+      "device": "web",
+      "screen": "cashbook",
+      "isHidden": false,
+      "expectedTitle": "Cashbook",
+      "renderedTitle": "Cashbook",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/close",
+      "persona": "owner",
+      "device": "web",
+      "screen": "close",
+      "isHidden": false,
+      "expectedTitle": "Monthly close",
+      "renderedTitle": "Monthly close",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/tax",
+      "persona": "owner",
+      "device": "web",
+      "screen": "tax",
+      "isHidden": false,
+      "expectedTitle": "Tax centre",
+      "renderedTitle": "Tax centre",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/costbenefit",
+      "persona": "owner",
+      "device": "web",
+      "screen": "costbenefit",
+      "isHidden": false,
+      "expectedTitle": "Cost & benefit",
+      "renderedTitle": "Cost & benefit",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/reports",
+      "persona": "owner",
+      "device": "web",
+      "screen": "reports",
+      "isHidden": false,
+      "expectedTitle": "Reports & export",
+      "renderedTitle": "Reports & export",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/company",
+      "persona": "owner",
+      "device": "web",
+      "screen": "company",
+      "isHidden": false,
+      "expectedTitle": "Company",
+      "renderedTitle": "Company",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/functions",
+      "persona": "owner",
+      "device": "web",
+      "screen": "functions",
+      "isHidden": false,
+      "expectedTitle": "Functions",
+      "renderedTitle": "Functions",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/integrations",
+      "persona": "owner",
+      "device": "web",
+      "screen": "integrations",
+      "isHidden": false,
+      "expectedTitle": "Integrations",
+      "renderedTitle": "Integrations",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/users",
+      "persona": "owner",
+      "device": "web",
+      "screen": "users",
+      "isHidden": false,
+      "expectedTitle": "Users & roles",
+      "renderedTitle": "Users & roles",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/datastudio",
+      "persona": "owner",
+      "device": "web",
+      "screen": "datastudio",
+      "isHidden": false,
+      "expectedTitle": "Data studio",
+      "renderedTitle": "Data studio",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/audit",
+      "persona": "owner",
+      "device": "web",
+      "screen": "audit",
+      "isHidden": false,
+      "expectedTitle": "Audit & logs",
+      "renderedTitle": "Audit & logs",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/plan",
+      "persona": "owner",
+      "device": "web",
+      "screen": "plan",
+      "isHidden": false,
+      "expectedTitle": "Plan & tier",
+      "renderedTitle": "Plan & tier",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/seats",
+      "persona": "owner",
+      "device": "web",
+      "screen": "seats",
+      "isHidden": false,
+      "expectedTitle": "Seats",
+      "renderedTitle": "Seats",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/quotas",
+      "persona": "owner",
+      "device": "web",
+      "screen": "quotas",
+      "isHidden": false,
+      "expectedTitle": "Message quotas",
+      "renderedTitle": "Message quotas",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/storage",
+      "persona": "owner",
+      "device": "web",
+      "screen": "storage",
+      "isHidden": false,
+      "expectedTitle": "Storage & add-ons",
+      "renderedTitle": "Storage & add-ons",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/web/billing",
+      "persona": "owner",
+      "device": "web",
+      "screen": "billing",
+      "isHidden": false,
+      "expectedTitle": "Billing",
+      "renderedTitle": "Billing",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/web/overview",
+      "persona": "platform",
+      "device": "web",
+      "screen": "overview",
+      "isHidden": false,
+      "expectedTitle": "Platform overview",
+      "renderedTitle": "Platform overview",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/web/registrations",
+      "persona": "platform",
+      "device": "web",
+      "screen": "registrations",
+      "isHidden": false,
+      "expectedTitle": "KYC & registration",
+      "renderedTitle": "KYC & registration",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/web/tenants",
+      "persona": "platform",
+      "device": "web",
+      "screen": "tenants",
+      "isHidden": false,
+      "expectedTitle": "Tenants",
+      "renderedTitle": "Tenants",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/web/resources",
+      "persona": "platform",
+      "device": "web",
+      "screen": "resources",
+      "isHidden": false,
+      "expectedTitle": "Resources",
+      "renderedTitle": "Resources",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/web/allocation",
+      "persona": "platform",
+      "device": "web",
+      "screen": "allocation",
+      "isHidden": false,
+      "expectedTitle": "Allocation",
+      "renderedTitle": "Allocation",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/web/database",
+      "persona": "platform",
+      "device": "web",
+      "screen": "database",
+      "isHidden": false,
+      "expectedTitle": "Database & ops",
+      "renderedTitle": "Database & ops",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/web/billing",
+      "persona": "platform",
+      "device": "web",
+      "screen": "billing",
+      "isHidden": false,
+      "expectedTitle": "Billing & licensing",
+      "renderedTitle": "Billing & licensing",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/web/security",
+      "persona": "platform",
+      "device": "web",
+      "screen": "security",
+      "isHidden": false,
+      "expectedTitle": "Security & audit",
+      "renderedTitle": "Security & audit",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/web/pusers",
+      "persona": "platform",
+      "device": "web",
+      "screen": "pusers",
+      "isHidden": false,
+      "expectedTitle": "Platform users",
+      "renderedTitle": "Platform users",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/mobile/today",
+      "persona": "staff",
+      "device": "mobile",
+      "screen": "today",
+      "isHidden": false,
+      "expectedTitle": "Today",
+      "renderedTitle": "Today",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/mobile/clock",
+      "persona": "staff",
+      "device": "mobile",
+      "screen": "clock",
+      "isHidden": false,
+      "expectedTitle": "Clock",
+      "renderedTitle": "Clock",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/mobile/leave",
+      "persona": "staff",
+      "device": "mobile",
+      "screen": "leave",
+      "isHidden": false,
+      "expectedTitle": "Leave",
+      "renderedTitle": "Leave",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/mobile/pay",
+      "persona": "staff",
+      "device": "mobile",
+      "screen": "pay",
+      "isHidden": false,
+      "expectedTitle": "Pay",
+      "renderedTitle": "Pay",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/mobile/more",
+      "persona": "staff",
+      "device": "mobile",
+      "screen": "more",
+      "isHidden": false,
+      "expectedTitle": "More",
+      "renderedTitle": "More",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/mobile/attendance",
+      "persona": "staff",
+      "device": "mobile",
+      "screen": "attendance",
+      "isHidden": false,
+      "expectedTitle": "Attendance",
+      "renderedTitle": "Attendance",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/mobile/schedule",
+      "persona": "staff",
+      "device": "mobile",
+      "screen": "schedule",
+      "isHidden": false,
+      "expectedTitle": "Schedule",
+      "renderedTitle": "Schedule",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/mobile/documents",
+      "persona": "staff",
+      "device": "mobile",
+      "screen": "documents",
+      "isHidden": false,
+      "expectedTitle": "Documents",
+      "renderedTitle": "Documents",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/mobile/inbox",
+      "persona": "staff",
+      "device": "mobile",
+      "screen": "inbox",
+      "isHidden": false,
+      "expectedTitle": "Inbox",
+      "renderedTitle": "Inbox",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/staff/mobile/me",
+      "persona": "staff",
+      "device": "mobile",
+      "screen": "me",
+      "isHidden": false,
+      "expectedTitle": "Me",
+      "renderedTitle": "Me",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/mobile/home",
+      "persona": "owner",
+      "device": "mobile",
+      "screen": "home",
+      "isHidden": false,
+      "expectedTitle": "Phoungern Co.",
+      "renderedTitle": "Phoungern Co.",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/mobile/staff",
+      "persona": "owner",
+      "device": "mobile",
+      "screen": "staff",
+      "isHidden": false,
+      "expectedTitle": "Staff",
+      "renderedTitle": "Staff",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/mobile/pay",
+      "persona": "owner",
+      "device": "mobile",
+      "screen": "pay",
+      "isHidden": false,
+      "expectedTitle": "Pay",
+      "renderedTitle": "Pay",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/mobile/books",
+      "persona": "owner",
+      "device": "mobile",
+      "screen": "books",
+      "isHidden": false,
+      "expectedTitle": "Books",
+      "renderedTitle": "Books",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/owner/mobile/more",
+      "persona": "owner",
+      "device": "mobile",
+      "screen": "more",
+      "isHidden": false,
+      "expectedTitle": "More",
+      "renderedTitle": "More",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/mobile/overview",
+      "persona": "platform",
+      "device": "mobile",
+      "screen": "overview",
+      "isHidden": false,
+      "expectedTitle": "Platform",
+      "renderedTitle": "Platform",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/mobile/registrations",
+      "persona": "platform",
+      "device": "mobile",
+      "screen": "registrations",
+      "isHidden": false,
+      "expectedTitle": "KYC",
+      "renderedTitle": "KYC",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/mobile/tenants",
+      "persona": "platform",
+      "device": "mobile",
+      "screen": "tenants",
+      "isHidden": false,
+      "expectedTitle": "Tenants",
+      "renderedTitle": "Tenants",
+      "bad": [],
+      "errors": []
+    },
+    {
+      "hash": "/platform/mobile/more",
+      "persona": "platform",
+      "device": "mobile",
+      "screen": "more",
+      "isHidden": false,
+      "expectedTitle": "More",
+      "renderedTitle": "More",
+      "bad": [],
+      "errors": []
+    }
+  ],
+  "flows": [
+    {
+      "persona": "owner",
+      "steps": [
+        {
+          "name": "cashbook add → db_ledger",
+          "ok": true
+        },
+        {
+          "name": "pay-run advance",
+          "ok": true
+        },
+        {
+          "name": "pay adj → draft",
+          "ok": true
+        },
+        {
+          "name": "pay commit → pendingPRs",
+          "ok": true
+        },
+        {
+          "name": "tax mark filed",
+          "ok": false
+        },
+        {
+          "name": "vat rate amend",
+          "ok": true
+        },
+        {
+          "name": "flag toggle (EWA→Advances)",
+          "ok": false
+        },
+        {
+          "name": "db backup",
+          "ok": true
+        },
+        {
+          "name": "approval decide",
+          "ok": true
+        },
+        {
+          "name": "scheduling publish",
+          "ok": true
+        },
+        {
+          "name": "tenant switch",
+          "ok": true
+        },
+        {
+          "name": "leveling switch",
+          "ok": true
+        }
+      ]
+    },
+    {
+      "persona": "staff",
+      "steps": [
+        {
+          "name": "clock-in (primary)",
+          "ok": false,
+          "note": "dead-end: punch button inert"
+        }
+      ]
+    },
+    {
+      "persona": "platform",
+      "steps": [
+        {
+          "name": "channel save",
+          "ok": true
+        },
+        {
+          "name": "KYC activate",
+          "ok": true
+        },
+        {
+          "name": "KYC reject",
+          "ok": true
+        },
+        {
+          "name": "platform db backup",
+          "ok": true
+        },
+        {
+          "name": "empty-queue crash test",
+          "ok": true,
+          "note": ""
+        }
+      ]
+    }
+  ],
+  "deadButtons": [
+    {
+      "persona": "staff",
+      "screen": "today",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Claim"
+        }
+      ]
+    },
+    {
+      "persona": "staff",
+      "screen": "clock",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "ch-btn",
+          "txt": "Selfie & clock in"
+        }
+      ]
+    },
+    {
+      "persona": "staff",
+      "screen": "attendance",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Request a fix"
+        }
+      ]
+    },
+    {
+      "persona": "staff",
+      "screen": "leave",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Request leave"
+        }
+      ]
+    },
+    {
+      "persona": "staff",
+      "screen": "schedule",
+      "count": 4,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Claim"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Claim"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Claim"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Offer Thu 18 to a teammate"
+        }
+      ]
+    },
+    {
+      "persona": "staff",
+      "screen": "pay",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Payslip PDF"
+        }
+      ]
+    },
+    {
+      "persona": "staff",
+      "screen": "documents",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "View"
+        }
+      ]
+    },
+    {
+      "persona": "staff",
+      "screen": "me",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Change"
+        }
+      ]
+    },
+    {
+      "persona": "owner",
+      "screen": "people",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Add person"
+        }
+      ]
+    },
+    {
+      "persona": "owner",
+      "screen": "attendance",
+      "count": 4,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Accept"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Ask fix"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Accept"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Ask fix"
+        }
+      ]
+    },
+    {
+      "persona": "owner",
+      "screen": "scheduling",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "New template"
+        }
+      ]
+    },
+    {
+      "persona": "owner",
+      "screen": "leave",
+      "count": 4,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Approve"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Decline"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Approve"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Decline"
+        }
+      ]
+    },
+    {
+      "persona": "owner",
+      "screen": "messaging",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "New broadcast"
+        }
+      ]
+    },
+    {
+      "persona": "owner",
+      "screen": "access",
+      "count": 4,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Manage"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Manage"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Manage"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Resend"
+        }
+      ]
+    },
+    {
+      "persona": "owner",
+      "screen": "integrations",
+      "count": 2,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Connect"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Connect"
+        }
+      ]
+    },
+    {
+      "persona": "owner",
+      "screen": "plan",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "See enterprise tiers"
+        }
+      ]
+    },
+    {
+      "persona": "owner",
+      "screen": "quotas",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Top up"
+        }
+      ]
+    },
+    {
+      "persona": "platform",
+      "screen": "tenants",
+      "count": 2,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Suspend"
+        },
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Suspend"
+        }
+      ]
+    },
+    {
+      "persona": "platform",
+      "screen": "allocation",
+      "count": 1,
+      "items": [
+        {
+          "tag": "button",
+          "cls": "btn",
+          "txt": "Apply allocation"
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-06-16T06:33:22.486Z"
+}
