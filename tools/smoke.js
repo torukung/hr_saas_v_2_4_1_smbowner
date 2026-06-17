@@ -17,7 +17,7 @@ global.location = { hash: "" };
 global.addEventListener = () => {};
 
 const files = [
-  "js/i18n.js", "js/ui.js", "js/data.js", "js/engine/tax.js", "js/engine/payroll.js", "js/engine/ledger.js", "js/engine/reports.js", "js/engine/flags.js", "js/engine/approvals.js", "js/engine/dbops.js", "js/engine/work.js", "js/engine/registration.js", "js/engine/profile.js", "js/engine/calendar.js", "js/engine/schedule.js", "js/engine/comms.js", "js/engine/staffdash.js", "js/auth.js",
+  "js/i18n.js", "js/ui.js", "js/data.js", "js/engine/tax.js", "js/engine/payroll.js", "js/engine/ledger.js", "js/engine/reports.js", "js/engine/flags.js", "js/engine/approvals.js", "js/engine/dbops.js", "js/engine/work.js", "js/engine/mail.js", "js/engine/registration.js", "js/engine/profile.js", "js/engine/calendar.js", "js/engine/schedule.js", "js/engine/comms.js", "js/engine/staffdash.js", "js/auth.js",
   "js/screens/staff.js", "js/screens/owner.js", "js/screens/platform.js",
   "js/personas.js", "js/screens/authviews.js"
 ];
@@ -32,7 +32,7 @@ section("Personas & registry");
 ["staff", "owner", "platform"].forEach(k => ok(!!PERSONAS[k], "persona present: " + k));
 ok(PERSONA_ORDER.length === 3, "3 personas in order");
 ok(PERSONAS.owner.twoTier === true, "owner is two-tier");
-ok(DATA.byId("phoungern").level === "L0" && DATA.byId("vientianemart").level === "L0", "default compliance level = L0");
+ok(DATA.byId("phoungern").level === "L2" && DATA.byId("vientianemart").level === "L0", "seeded levels: Phoungern L2 (statutory) · Vientiane Mart L0");
 ok(PERSONAS.owner.sections.length === 5, "owner has 5 sections (dashboard folded into Staff Manager)");
 
 /* ---- payroll vector (blueprint BO-4) ---- */
@@ -125,7 +125,7 @@ DATA.byId("phoungern").level = "L0";
 ok(PAYROLL.getRun("phoungern").totals.cost === closedCost, "closed run frozen — level change doesn't rewrite it");
 ok(PAYROLL.computeRun("phoungern").totals.cost !== closedCost, "a fresh L0 run differs (so the freeze matters)");
 ok(TAX.calendar("phoungern").find(p => p.key === "vat-2026-q2").status === "locked", "VAT locked below L2");
-DATA.byId("phoungern").level = "L0";
+DATA.byId("phoungern").level = "L2"; // restore seeded default
 TAX.__reset(); PAYROLL.__reset(); LEDGER.__reset();
 
 /* ---- dw_reports — BO-8 ---- */
@@ -144,7 +144,7 @@ ok(s8[5].revenue === m8.revenue && s8[5].staffCost === m8.staffCost, "June serie
 DATA.byId("phoungern").level = "L0"; const beforeStaff = DW.monthly("phoungern").staffCost;
 DATA.byId("phoungern").level = "L2";
 ok(DW.monthly("phoungern").staffCost !== beforeStaff, "leveling changes staff cost in the rollup");
-DATA.byId("phoungern").level = "L0";
+DATA.byId("phoungern").level = "L2"; // restore seeded default
 PAYROLL.oneClick("phoungern");
 ok(DW.monthly("phoungern").otherExp === expL, "posted payroll lines don't double-count as other-exp");
 const wb = DW.workbook("phoungern");
@@ -292,6 +292,44 @@ ok(REG.kycOn() === true && regNav.when() === true, "setKyc(true) enables the fea
 ok(/kyc-master on/.test(SCR_PLATFORM.web.overview().body) && /data-act="kyc:feature:off"/.test(SCR_PLATFORM.web.overview().body) && /KYC queue/.test(SCR_PLATFORM.web.overview().body), "overview (on) shows KYC queue + toggle-off");
 ok(DATA.AUDIT.some(a => a.fact === "platform.kyc_on"), "KYC enable is audited");
 REG.__reset();
+
+/* ---- platform mail server + alerts — MAIL engine ---- */
+section("Platform mail server + alerts — MAIL engine");
+MAIL.__reset();
+ok(MAIL.config().host === "smtp.gmail.com" && MAIL.config().status === "connected", "mail server seeds to Gmail SMTP, connected");
+ok(MAIL.config().port === 465 && MAIL.config().security === "ssl", "default = SSL / port 465");
+MAIL.applyPreset("gmail587");
+ok(MAIL.config().port === 587 && MAIL.config().security === "starttls", "Gmail STARTTLS preset → 587 / starttls");
+ok(DATA.AUDIT.some(a => a.fact === "comms.server_preset"), "preset is audited");
+MAIL.save({ from: "noreply@adeptio.la" });
+ok(MAIL.config().from === "noreply@adeptio.la" && DATA.AUDIT.some(a => a.fact === "comms.server_set"), "save updates From + audits");
+ok(MAIL.CATALOG.filter(c => c.kind === "transactional").length >= 2, "activation + password are transactional (always-on)");
+ok(MAIL.alertOn("reslimit") === true && MAIL.alertOn("billing") === false, "default alerts: resource-limit on, billing off");
+ok(MAIL.toggleAlert("billing") === true && MAIL.alertOn("billing") === true && DATA.AUDIT.some(a => a.fact.indexOf("comms.alert_") === 0), "toggleAlert flips + audits");
+MAIL.setThreshold(80); ok(MAIL.getThreshold() === 80, "threshold setter sets within range");
+MAIL.setThreshold(10); ok(MAIL.getThreshold() === 80, "threshold below 50 is ignored");
+MAIL.setThreshold(75);
+const brk = MAIL.breachingTenants();
+ok(brk.some(x => x.t.id === "phoungern") && brk.every(x => x.breaches.length > 0), "breachingTenants finds Phoungern near a cap at 75%");
+const obM = DATA.OUTBOX.length;
+const ar = MAIL.alertResource("phoungern", "line");
+ok(ar.ok && DATA.OUTBOX.length > obM && DATA.AUDIT.some(a => a.fact === "comms.sent"), "alertResource emails operators + logs comms.sent");
+const tLog = MAIL.log().length;
+MAIL.test(); ok(MAIL.log().length === tLog + 1 && DATA.AUDIT.some(a => a.fact === "comms.server_test"), "send test appends to the log + audits");
+// consolidation: the KYC channel delegates to the SAME server
+REG.__reset();
+ok(REG.getChannel().host === MAIL.config().host && REG.getChannel().status === MAIL.config().status, "REG.getChannel delegates to MAIL (single server)");
+REG.setChannel({ host: "smtp.example.com", from: "x@y.la" });
+ok(MAIL.config().host === "smtp.example.com", "REG.setChannel writes through to MAIL");
+// platform nav + screen + Resources tie-in
+ok(PERSONAS.platform.nav.some(g => g.items.some(it => it.id === "communications")), "platform nav has Communications");
+ok(typeof SCR_PLATFORM.web.communications === "function", "communications screen fn exists");
+const commBody = SCR_PLATFORM.web.communications().body;
+ok(/Mail server · SMTP/.test(commBody) && /data-ms="host"/.test(commBody) && /mail:save/.test(commBody) && /mail:test/.test(commBody), "communications: SMTP form wired (save + test)");
+ok(/What this server sends/.test(commBody) && /mail:alert-toggle:/.test(commBody) && /Recent sends/.test(commBody) && !/undefined|NaN|\[object/.test(commBody), "communications: catalogue + log render clean");
+const resBody = SCR_PLATFORM.web.resources().body;
+ok(/Email server/.test(resBody) && /platform\/web\/communications/.test(resBody) && /Allocation alerts/.test(resBody), "Resources page: mail-status strip + allocation-alerts card");
+MAIL.__reset(); REG.__reset();
 
 /* ---- people profile — PROFILE engine ---- */
 section("People profile — PROFILE engine");
@@ -492,9 +530,10 @@ ok(mteams.length >= 2 && mteams.every(t => t.members.length > 0) && DATA.people(
 ok(mteams.map(t => t.members.length).reduce((a, b) => a + b, 0) === DATA.people("phoungern").length, "team grouping covers the whole roster");
 // roster matches the platform seat allocation (people = used seats, by role)
 const phSeats = DATA.byId("phoungern").seats, phByAccess = DATA.people("phoungern").reduce((m, p) => { m[p.access] = (m[p.access] || 0) + 1; return m; }, {});
-ok((phByAccess.staff || 0) === phSeats.staff.used && (phByAccess.manager || 0) === phSeats.manager.used && (phByAccess.owner || 0) === phSeats.admin.used, "roster by role matches seats used (staff/manager/admin)");
-ok(DATA.people("phoungern").length === phSeats.staff.used + phSeats.manager.used + phSeats.admin.used && DATA.byId("phoungern").headcount === DATA.people("phoungern").length, "headcount = total seats used (people match the allowance)");
-ok(phSeats.staff.limit > phSeats.staff.used && phSeats.manager.limit > phSeats.manager.used && phSeats.admin.limit > phSeats.admin.used, "seat limits carry headroom above used");
+const usedTotal = phSeats.staff.used + phSeats.manager.used + phSeats.admin.used, limitTotal = phSeats.staff.limit + phSeats.manager.limit + phSeats.admin.limit;
+ok(phSeats.staff.used === 8 && phSeats.manager.used === 1 && phSeats.admin.used === 1, "seats used: 8 staff · 1 manager · 1 admin");
+ok(usedTotal === 10 && limitTotal === 14, "Phoungern seats = 10 used of 14 limit (10/14)");
+ok(usedTotal <= DATA.people("phoungern").length && (phByAccess.staff || 0) >= phSeats.staff.used && (phByAccess.manager || 0) >= phSeats.manager.used && (phByAccess.owner || 0) >= phSeats.admin.used, "seats used ≤ roster (not every employee holds a seat)");
 const peBody = SCR_OWNER.web.people().body;
 ok(/team-card/.test(peBody) && /team-member/.test(peBody) && /people-profile\//.test(peBody), "People screen: team cards + members linking to profiles");
 // 1 + 3 — Approvals: register removed, priority summary + two-level tabs

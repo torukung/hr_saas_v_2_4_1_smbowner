@@ -9,7 +9,7 @@ const root = path.join(__dirname, "..");
 
 const css = ["css/tokens.css", "css/app.css"].map(f => fs.readFileSync(path.join(root, f), "utf8")).join("\n");
 const js = [
-  "js/i18n.js", "js/ui.js", "js/data.js", "js/engine/tax.js", "js/engine/payroll.js", "js/engine/ledger.js", "js/engine/reports.js", "js/engine/flags.js", "js/engine/approvals.js", "js/engine/dbops.js", "js/engine/work.js", "js/engine/registration.js", "js/engine/profile.js", "js/engine/calendar.js", "js/engine/schedule.js", "js/engine/comms.js", "js/engine/staffdash.js", "js/auth.js",
+  "js/i18n.js", "js/ui.js", "js/data.js", "js/engine/tax.js", "js/engine/payroll.js", "js/engine/ledger.js", "js/engine/reports.js", "js/engine/flags.js", "js/engine/approvals.js", "js/engine/dbops.js", "js/engine/work.js", "js/engine/mail.js", "js/engine/registration.js", "js/engine/profile.js", "js/engine/calendar.js", "js/engine/schedule.js", "js/engine/comms.js", "js/engine/staffdash.js", "js/auth.js",
   "js/screens/staff.js", "js/screens/owner.js", "js/screens/platform.js",
   "js/personas.js", "js/screens/authviews.js", "js/app.js"
 ].map(f => fs.readFileSync(path.join(root, f), "utf8")).join("\n;\n");
