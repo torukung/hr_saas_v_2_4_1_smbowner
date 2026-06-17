@@ -18,7 +18,7 @@ window.APPROVALS = (function () {
   const seed = () => ([
     { id: "AP-245", type: "claim", who: "Noy Phaketh", detail: "Open shift · Wed", grade: "ok", state: "pending" },
     { id: "AP-244", type: "ot", who: "Khamphan Sayasith", detail: "OT 4h · within cap", grade: "ok", state: "pending" },
-    { id: "AP-243", type: "swap", who: "Khamla → Souphaphone", detail: "Thu 18 · OT ok", grade: "ok", state: "pending" },
+    { id: "AP-243", type: "swap", who: "Tinar → Souphaphone", detail: "Thu 18 · OT ok", grade: "ok", state: "pending" },
     { id: "AP-242", type: "punchfix", who: "Daophet Many", detail: "Clock-in 50 m out · weak GPS", grade: "flag", state: "pending" },
     { id: "AP-241", type: "leave", who: "Souphaphone Keo", detail: "Annual · 2 days · 18 Jun", grade: "ok", state: "pending" }
   ]);
@@ -51,7 +51,17 @@ window.APPROVALS = (function () {
     DATA.AUDIT.unshift({ fact: "approve.type_registered", who: "Owner", when: "2026-06-15", ref: def.key });
     return TYPES[def.key];
   }
-  function __reset() { for (const k in store) delete store[k]; }
+  /* ---- inbox view state (manager picks the grouping; it's remembered) ---- */
+  // category buckets, in manager priority order (on shift → overtime → leave → others)
+  const CAT_OF = { swap: "shift", claim: "shift", punchfix: "shift", ot: "overtime", leave: "leave", ewa: "others", expense: "others", doc_ack: "others" };
+  const CAT_ORDER = ["shift", "overtime", "leave", "others"];
+  const CAT_LABEL = { shift: "On shift", overtime: "Overtime", leave: "Leave", others: "Others" };
+  const catOf = (type) => CAT_OF[type] || "others";
+  const view = { mode: "type", tab: null, sub: null, saved: false };
+  function setView(o) { Object.assign(view, o); }
+  function __resetView() { view.mode = "type"; view.tab = null; view.sub = null; view.saved = false; }
 
-  return { TYPES, inbox, pending, get, decide, request, register, __reset };
+  function __reset() { for (const k in store) delete store[k]; __resetView(); }
+
+  return { TYPES, inbox, pending, get, decide, request, register, CAT_OF, CAT_ORDER, CAT_LABEL, catOf, view, setView, __resetView, __reset };
 })();

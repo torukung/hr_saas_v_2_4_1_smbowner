@@ -68,12 +68,55 @@ window.LEDGER = (function () {
     };
   }
 
+  // top expense categories this month (cashbook, descending)
+  function topExpenses(tid, n) {
+    const m = {};
+    ranged(tid, "month").filter(e => e.kind === "exp").forEach(e => { m[e.cat] = (m[e.cat] || 0) + e.amount; });
+    return Object.keys(m).map(cat => ({ cat, amount: m[cat] })).sort((a, b) => b.amount - a.amount).slice(0, n || 5);
+  }
+
+  // ---- recurring / scheduled expenses (waiting to be posted to the cashbook) ----
+  const recur = {};
+  function initRecur(tid) {
+    if (!recur[tid]) recur[tid] = (DATA.RECUR_EXPENSES[tid] || []).map((e, i) => Object.assign({ id: "RX" + tid + i, tenant: tid, posted: false }, e));
+    return recur[tid];
+  }
+  const recurring = (tid) => initRecur(tid).slice().sort((a, b) => a.next < b.next ? -1 : a.next > b.next ? 1 : 0);
+  function advance(iso, freq) {
+    const d = new Date(iso);
+    if (freq === "weekly") d.setDate(d.getDate() + 7);
+    else if (freq === "yearly") d.setFullYear(d.getFullYear() + 1);
+    else d.setMonth(d.getMonth() + 1);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function postRecurring(tid, id) {
+    const r = initRecur(tid).find(x => x.id === id); if (!r) return { ok: false };
+    const today = (window.CAL && CAL.TODAY) || "2026-06-16";
+    add(tid, { date: today, kind: "exp", cat: r.cat, amount: r.amount, method: r.method || "transfer", tax: r.tax || "exempt" });
+    r.next = advance(r.next, r.freq);
+    DATA.AUDIT.unshift({ fact: "expense.posted", who: "Owner", when: today + " 09:30", ref: r.name + " · " + UI.kip(r.amount).replace("₭ ", "") + " (" + r.freq + ")" });
+    return { ok: true, r };
+  }
+  function setRecurringFreq(tid, id, freq) {
+    const r = initRecur(tid).find(x => x.id === id); if (!r) return { ok: false };
+    r.freq = freq;
+    DATA.AUDIT.unshift({ fact: "expense.scheduled", who: "Owner", when: "2026-06-16 09:30", ref: r.name + " → " + freq });
+    return { ok: true, r };
+  }
+  function addRecurring(tid, obj) {
+    if (!obj || !obj.name || !obj.amount) return { ok: false, err: "Name and amount are required" };
+    initRecur(tid);
+    recur[tid].unshift(Object.assign({ id: "RX" + Date.now(), tenant: tid, posted: false, next: "2026-07-01", method: "transfer", tax: "exempt", cat: obj.name }, obj));
+    DATA.AUDIT.unshift({ fact: "expense.scheduled", who: "Owner", when: "2026-06-16 09:30", ref: obj.name + " · " + (obj.freq || "monthly") });
+    return { ok: true };
+  }
+
   function toCSV(tid) {
     const rows = [["Date", "Type", "Category", "Method", "Amount (LAK)", "Source"]]
       .concat(all(tid).map(e => [e.date, e.kind, e.cat, e.method, e.amount, e.source]));
     return rows.map(r => r.map(c => /[",\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(",")).join("\n");
   }
-  function __reset() { for (const k in store) delete store[k]; view = "month"; }
+  function __reset() { for (const k in store) delete store[k]; for (const k in recur) delete recur[k]; view = "month"; }
 
-  return { init, all, add, postFromRun, ranged, sums, rollup, toCSV, setView, getView, hasPayrollLines, __reset };
+  return { init, all, add, postFromRun, ranged, sums, rollup, toCSV, setView, getView, hasPayrollLines, topExpenses, recurring, postRecurring, setRecurringFreq, addRecurring, __reset };
 })();

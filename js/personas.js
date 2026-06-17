@@ -17,17 +17,16 @@ window.PERSONAS = (function () {
     nav: [{
       group: "My day", items: [
         { id: "today", label: "Today", icon: "sun" },
-        { id: "clock", label: "Clock", icon: "clock" },
+        { id: "clock", label: "Clock in/out", icon: "clock" },
         { id: "attendance", label: "Attendance", icon: "history" },
         { id: "leave", label: "Leave", icon: "calendar" },
-        { id: "schedule", label: "Schedule", icon: "list" }
+        { id: "schedule", label: "Jobs schedule & shifts", icon: "calendar" }
       ]
     }, {
       group: "Me", items: [
         { id: "pay", label: "Pay", icon: "banknote" },
-        { id: "documents", label: "Documents", icon: "files" },
         { id: "inbox", label: "Inbox", icon: "inbox" },
-        { id: "me", label: "Me", icon: "user" }
+        { id: "me", label: "Profile", icon: "user" }
       ]
     }],
     web: SCR_STAFF.web, mobile: SCR_STAFF.mobile,
@@ -46,22 +45,24 @@ window.PERSONAS = (function () {
     appName: "Owner Console", roleLine: "Owner · Manager · HR · Books", domain: "tenant",
     twoTier: true,
     sections: [
-      { id: "dashboard", label: "Dashboard", icon: "home", solo: true },
       {
         id: "staffmgr", label: "Staff", icon: "users", tag: "2.1", count: pendingApprovals,
         title: "Staff Manager", sub: [
-          { id: "people", label: "People", icon: "users" },
-          { id: "attendance", label: "Attendance", icon: "history" },
-          { id: "scheduling", label: "Scheduling", icon: "calendar" },
-          { id: "leave", label: "Leave", icon: "calCheck", count: pendingLeave },
+          { id: "dashboard", label: "Manager Dashboard", icon: "home" },
           { id: "approvals", label: "Approvals", icon: "check", count: pendingApprovals },
+          { id: "calendar", label: "Team calendar", icon: "calCheck" },
+          { id: "people", label: "People", icon: "users" },
+          { id: "scheduling", label: "Jobs schedule & shifts", icon: "calendar" },
+          { id: "attendance", label: "Attendance", icon: "history" },
+          { id: "leave", label: "Leave", icon: "calCheck", count: pendingLeave },
           { id: "messaging", label: "Messaging & content", icon: "megaphone" },
-          { id: "access", label: "Access & invites", icon: "key" }
+          { id: "access", label: "Manager & Admin", icon: "key" }
         ]
       },
       {
         id: "payroll", label: "Payroll", icon: "banknote", tag: "★",
         title: "Payroll", sub: [
+          { id: "pay-dashboard", label: "Dashboard", icon: "chart" },
           { id: "pay-runs", label: "Pay runs", icon: "banknote" },
           { id: "components", label: "Components", icon: "sliders" },
           { id: "advances", label: "Advances (EWA)", icon: "wallet" },
@@ -71,7 +72,7 @@ window.PERSONAS = (function () {
         ]
       },
       {
-        id: "accounting", label: "Books", icon: "book", tag: "2.2",
+        id: "accounting", label: "Accounting", icon: "book", tag: "2.2",
         title: "Accounting", sub: [
           { id: "cashbook", label: "Cashbook", icon: "book" },
           { id: "close", label: "Monthly close", icon: "calCheck" },
@@ -84,6 +85,7 @@ window.PERSONAS = (function () {
         id: "system", label: "System", icon: "settings", tag: "2.3",
         title: "System Management", sub: [
           { id: "company", label: "Company", icon: "briefcase" },
+          { id: "staffdash", label: "Staff dashboard", icon: "grid" },
           { id: "functions", label: "Functions", icon: "power" },
           { id: "integrations", label: "Integrations", icon: "plug" },
           { id: "users", label: "Users & roles", icon: "users" },
@@ -107,7 +109,7 @@ window.PERSONAS = (function () {
       { id: "home", label: "Home", icon: "home" },
       { id: "staff", label: "Staff", icon: "users" },
       { id: "pay", label: "Pay", icon: "banknote" },
-      { id: "books", label: "Books", icon: "book" },
+      { id: "books", label: "Accounting", icon: "book" },
       { id: "more", label: "More", icon: "dots" }
     ],
     tabParent: {}
@@ -118,6 +120,7 @@ window.PERSONAS = (function () {
     if (s.solo) { OWNER.sectionOf[s.id] = s.id; OWNER.firstOf[s.id] = s.id; }
     else { OWNER.firstOf[s.id] = s.sub[0].id; s.sub.forEach(it => OWNER.sectionOf[it.id] = s.id); }
   });
+  OWNER.sectionOf["people-profile"] = "staffmgr"; // drill-down from the People roster keeps Staff active
 
   const PLATFORM = {
     key: "platform", label: "Platform", accent: "platform", icon: "layers",
@@ -126,7 +129,7 @@ window.PERSONAS = (function () {
     nav: [{
       group: "Operate", items: [
         { id: "overview", label: "Overview", icon: "grid" },
-        { id: "registrations", label: "Registrations", icon: "idcard", count: pendingKyc },
+        { id: "registrations", label: "KYC & registration", icon: "idcard", count: pendingKyc, when: () => window.REG && REG.kycOn() },
         { id: "tenants", label: "Tenants", icon: "store" },
         { id: "resources", label: "Resources", icon: "gauge" },
         { id: "allocation", label: "Allocation", icon: "sliders" }
@@ -142,7 +145,7 @@ window.PERSONAS = (function () {
     web: SCR_PLATFORM.web, mobile: SCR_PLATFORM.mobile,
     tabs: [
       { id: "overview", label: "Overview", icon: "grid" },
-      { id: "registrations", label: "KYC", icon: "idcard", count: pendingKyc },
+      { id: "registrations", label: "KYC", icon: "idcard", count: pendingKyc, when: () => window.REG && REG.kycOn() },
       { id: "tenants", label: "Tenants", icon: "store" },
       { id: "more", label: "More", icon: "dots" }
     ],

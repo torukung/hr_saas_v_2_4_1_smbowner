@@ -28,6 +28,7 @@
   function route() {
     const h = location.hash.replace(/^#\/?/, "");
     if (h === "login") return (AUTH.portalOn() && AUTH.session()) ? landingRoute(AUTH.session()) : { view: "login" };
+    if (h === "register" || h === "register/done") return { view: "register", done: h === "register/done" }; // public — bypasses the wall (KYC on = full flow · off = instant no-KYC)
     if (!h || h === "launcher") return { view: "launcher" };
     // wall: sign-in mode + no session → login (focus the entered persona)
     if (AUTH.portalOn() && !AUTH.session()) {
@@ -48,6 +49,7 @@
     const map = dev === "web" ? P.web : P.mobile;
     let scr = map[screen] ? screen : firstScreen(P, dev);
     if (FLAGS.hiddenScreens(DATA.state.tenantId, persona).has(scr)) scr = firstScreen(P, dev); // feature off → its screen is hidden
+    if (persona === "platform" && scr === "registrations" && window.REG && !REG.kycOn()) scr = firstScreen(P, dev); // KYC feature off → hide the hub
     return { view: "app", persona, device: dev, screen: scr, param: rest.length ? decodeURIComponent(rest.join("/")) : undefined };
   }
   function go(path) { location.hash = "#/" + path; }
@@ -96,8 +98,9 @@
       }
     }
 
+    const sesAvatar = (onApp && cur === "staff" && window.PROFILE && DATA.me()) ? PROFILE.avatar(DATA.me().id) : avatar(ses ? ses.name : "");
     const acctUI = ses
-      ? `<span class="avatar-btn session" title="${esc(ses.email)} · ${esc(ses.role)}">${avatar(ses.name)}</span>
+      ? `<span class="avatar-btn session" title="${esc(ses.email)} · ${esc(ses.role)} · present person, from profile">${sesAvatar}</span>
          <button class="seg-logout" data-act="auth-logout" title="Sign out (${esc(ses.email)})">${icon("logout")}</button>`
       : AUTH.portalOn()
         ? `<button class="seg-login" data-go="login" title="Open the sign-in portal">${icon("key")} Sign in</button>`
@@ -152,6 +155,17 @@
         </div>
       </article>`;
     }).join("");
+    const regKyc = window.REG && REG.kycOn();
+    const registerCard = `<article class="hub-card" data-go="register" style="--pc:var(--brand);--pd:var(--brand-deep);--pb:var(--brand-bg);--pl:#D6D9EA">
+        <span class="swatch">${icon("idcard")}</span>
+        <span class="who">NEW SHOP · ${regKyc ? "KYC" : "INSTANT"}</span>
+        <h3>Register your shop</h3>
+        <p class="tag">${regKyc ? "Self-serve sign-up — ID + selfie" : "Self-serve sign-up — instant access"}</p>
+        <ul>${regKyc
+        ? `<li>Company · email · phone · language</li><li>ID card + owner selfie (KYC)</li><li>Platform activates → password email</li>`
+        : `<li>Company · email · phone · language</li><li>No ID check — instant</li><li>Access link emailed (email = username)</li>`}</ul>
+        <div class="enter"><button data-go="register">${icon("userPlus")} Start registration</button></div>
+      </article>`;
     const st = DATA.platformStats();
     return `${topbar({ view: "launcher" })}
     <main class="launcher screen-fade">
@@ -160,7 +174,7 @@
         <h1>One backend, two people per shop,<br><em>one operator above them all.</em></h1>
         <p class="lede">A <strong>multi-tenant</strong> HR platform for the Lao small business — where the owner is also the manager, the HR and the bookkeeper. Enter a persona below to open its workspace: <strong>Staff</strong> and <strong>Owner</strong> live inside a shop; the <strong>Platform Administrator</strong> runs the whole fleet above them. Sign-in is pre-filled — or switch to <strong>open demo</strong> and walk straight in.</p>
       </div>
-      <div class="hub-grid">${cards}</div>
+      <div class="hub-grid">${cards}${registerCard}</div>
       ${AUTHV.landingSection()}
       <div class="launch-meta">
         <span><b>3</b> personas</span>
@@ -174,6 +188,29 @@
     <footer class="footer-note">${icon("lock")} UI/UX preview for the dev team — structure & flows per Blueprint v2.4.1.SmbOwner · demo data, no backend this pass · © 2026 Adeptio.</footer>`;
   }
 
+  // Rail head — Staff shows the present person (photo · name · position from profile) as an
+  // SFDC-style clickable menu (Personal data · Time → profile); other personas keep the app-name head.
+  function railHead(r, P) {
+    if (r.persona === "staff" && window.PROFILE && DATA.me()) {
+      const uid = DATA.me().id, me = DATA.me(), prof = PROFILE.get(uid);
+      return `<div class="rail-head">
+        <details class="pf-menu railmenu">
+          <summary class="rp-row" title="Profile menu">
+            ${PROFILE.avatar(uid)}
+            <div class="rp-id"><div class="rp-name">${esc(me.name)}</div><div class="rp-role">${esc(prof.position)}</div></div>
+            ${icon("chevD", "rp-chev")}
+          </summary>
+          <div class="pf-menu-pop sfdc">
+            <div class="sfdc-card">${PROFILE.avatar(uid, { lg: true })}<div class="sfdc-meta"><div class="sfdc-name">${esc(me.name)}</div><div class="sfdc-sub">${esc(prof.email)}</div></div></div>
+            <a class="pf-mi" data-go="staff/web/me/personal">${icon("user")} Personal data</a>
+            <a class="pf-mi" data-go="staff/web/me/time">${icon("clock")} Time</a>
+          </div>
+        </details>
+      </div>`;
+    }
+    return `<div class="rail-head"><span class="pin">${icon(P.icon)}</span><div><div class="t">${P.appName}</div><div class="s">${P.roleLine}</div></div></div>`;
+  }
+
   /* ---------------- single-rail shell (staff · platform) ---------------- */
   function railShell(r) {
     const P = PERSONAS[r.persona];
@@ -181,7 +218,7 @@
     const hidden = FLAGS.hiddenScreens(DATA.state.tenantId, r.persona);
     const navHtml = P.nav.map(g => `
       <div class="group eyebrow">${g.group}</div>
-      ${g.items.filter(it => !hidden.has(it.id)).map(it => {
+      ${g.items.filter(it => !hidden.has(it.id) && (typeof it.when !== "function" || it.when())).map(it => {
       const cnt = typeof it.count === "function" ? it.count() : it.count;
       return `<button class="nav-item" aria-current="${r.screen === it.id}" data-go="${r.persona}/web/${it.id}">
           ${icon(it.icon)}<span class="lbl">${it.label}</span>${cnt ? `<span class="count">${cnt}</span>` : ""}</button>`;
@@ -192,7 +229,7 @@
     return `${topbar(r)}
     <div class="shell">
       <aside class="rail" aria-label="${P.label} navigation">
-        <div class="rail-head"><span class="pin">${icon(P.icon)}</span><div><div class="t">${P.appName}</div><div class="s">${P.roleLine}</div></div></div>
+        ${railHead(r, P)}
         ${navHtml}
         <div class="rail-foot">${foot}</div>
       </aside>
@@ -203,7 +240,7 @@
   /* ---------------- two-tier shell (owner) ---------------- */
   function twoTierShell(r) {
     const P = PERSONAS[r.persona];
-    const secId = P.sectionOf[r.screen] || "dashboard";
+    const secId = P.sectionOf[r.screen] || (P.sections[0] && P.sections[0].id);
     const sec = P.sections.find(s => s.id === secId);
     const def = P.web[r.screen](r.param);
     const secRail = P.sections.map(s => {
@@ -238,7 +275,7 @@
     const P = PERSONAS[r.persona];
     const def = P.mobile[r.screen](r.param);
     const activeTab = (P.tabParent && P.tabParent[r.screen]) || r.screen;
-    const tabs = P.tabs.map(tb => {
+    const tabs = P.tabs.filter(tb => typeof tb.when !== "function" || tb.when()).map(tb => {
       const cnt = typeof tb.count === "function" ? tb.count() : tb.count;
       return `<button class="tab" aria-current="${activeTab === tb.id}" data-go="${r.persona}/mobile/${tb.id}">
         ${icon(tb.icon)}<span>${tb.label}${cnt ? ` <b class="tab-cnt">${cnt}</b>` : ""}</span><span class="tdot"></span></button>`;
@@ -267,17 +304,31 @@
   }
 
   /* ---------------- render ---------------- */
+  let lastRouteKey = null;
   function render() {
     const r = route();
     document.body.dataset.persona = r.view === "app" ? r.persona : (r.view === "login" ? AUTHV.state.focus : "");
-    document.body.dataset.portal = r.view === "login" ? "1" : "";
+    document.body.dataset.portal = (r.view === "login" || r.view === "register") ? "1" : "";
     let html;
     if (r.view === "login") html = AUTHV.portal();
+    else if (r.view === "register") html = AUTHV.registerPage(r.done);
     else if (r.view === "launcher") html = launcher();
     else if (r.view === "app") html = r.device === "mobile" ? mobileShell(r) : (PERSONAS[r.persona].twoTier ? twoTierShell(r) : railShell(r));
+    // day-summary popup overlays the owner web console wherever the team grid lives (dashboard or full calendar)
+    if (r.view === "app" && r.persona === "owner" && r.device === "web" && window.CAL && CAL.state.dayOpen) html += CAL.dayPanel(DATA.state.tenantId);
     app().innerHTML = html;
-    window.scrollTo(0, 0);
-    if (r.blocked) toast(r.blocked, "warn");
+    // only jump to the top on a real navigation (route change) — in-place re-renders
+    // (calendar day clicks, tab switches, tenant switch) keep the scroll position stable
+    const routeKey = [r.view, r.persona, r.device, r.screen, r.param].join("|");
+    if (routeKey !== lastRouteKey) { window.scrollTo(0, 0); lastRouteKey = routeKey; }
+    if (r.blocked) {
+      // Keep the address bar honest with what we actually rendered (the signed-in
+      // persona's landing). replaceState updates the URL without firing hashchange,
+      // so there's no re-render and no redirect loop.
+      const fixed = "#/" + r.persona + "/" + r.device + "/" + r.screen;
+      if (location.hash !== fixed && window.history && history.replaceState) history.replaceState(null, "", fixed);
+      toast(r.blocked, "warn");
+    }
   }
 
   /* ---------------- actions ---------------- */
@@ -297,6 +348,8 @@
     if (val === "auth-logout") { AUTH.signOut(); AUTHV.state.err = ""; return go("launcher"); }
     if (val.startsWith("portal-mode:")) { AUTH.setPortal(val.split(":")[1] === "on"); render(); return toast(AUTH.portalOn() ? "Sign-in armed — entering a persona now asks to sign in." : "Open-demo on — walk into any persona without signing in."); }
     if (val === "lang-lo") return toast("Lao language pack ships in the language wave — the portal & payslips are already bilingual.", "warn");
+    // ---- staff punch (demo) — honest stub; live attendance engine (db_time) is a later pass ----
+    if (val === "staff:punch") return toast("Selfie captured · punch queued ✓ — the server stamps the official time on sync. (Live attendance engine lands in a later pass.)");
     // ---- payroll lifecycle ----
     if (val === "pay-run:advance") { const r = PAYROLL.advance(); if (r.state === "close") WORK.paydayAlert(DATA.state.tenantId, r); render(); return toast("Pay run → " + r.state + (r.state === "close" ? " · posted to Books · payday alert sent" : "")); }
     if (val === "pay-run:oneclick") { const r = PAYROLL.oneClick(); WORK.paydayAlert(DATA.state.tenantId, r); render(); return toast("One-tap run complete — closed · posted to Books · payday alert sent"); }
@@ -319,16 +372,56 @@
     if (val === "tax:rate-vat") return taxRateVat();
     // ---- governance: flags · approvals · db ops ----
     if (val.startsWith("flags:toggle:")) return flagToggle(val.split(":")[2]);
-    if (val === "approve:register") return approveRegister();
     if (val.startsWith("approve:")) { const p = val.split(":"); APPROVALS.decide(DATA.state.tenantId, p[1], p[2]); render(); return toast("Decision recorded · " + p[2] + " (audited)"); }
+    // ---- approvals inbox view (group by team / type · remembered) ----
+    if (val.startsWith("appr:mode:")) { APPROVALS.setView({ mode: val.split(":")[2], tab: null, sub: null, saved: false }); return render(); }
+    if (val.startsWith("appr:tab:")) { APPROVALS.setView({ tab: val.slice("appr:tab:".length), sub: null, saved: false }); return render(); }
+    if (val.startsWith("appr:sub:")) { APPROVALS.setView({ sub: val.slice("appr:sub:".length), saved: false }); return render(); }
+    if (val === "appr:save") { APPROVALS.setView({ saved: true }); render(); return toast("Inbox view saved — remembered next time"); }
+    // ---- manager & admin seats ----
+    if (val === "access:add") return toast("Invite a manager/admin — sends an email invite (wired in a later pass)", "warn");
+    // ---- staff dashboard builder (SFDC-style: catalog · place · resize) ----
+    if (val.startsWith("staffdash:add:")) { const ok = STAFFDASH.add(DATA.state.tenantId, val.slice("staffdash:add:".length)); render(); return toast(ok ? "Widget added to the staff dashboard" : "Couldn't place that widget — no room", ok ? "" : "warn"); }
+    if (val.startsWith("staffdash:remove:")) { STAFFDASH.remove(DATA.state.tenantId, val.slice("staffdash:remove:".length)); render(); return toast("Widget removed"); }
+    if (val.startsWith("staffdash:move:")) { const p = val.split(":"); const ok = STAFFDASH.move(DATA.state.tenantId, p[2], +p[3], +p[4]); render(); if (!ok) toast("Can't move there — the edge or another widget is in the way", "warn"); return; }
+    if (val.startsWith("staffdash:resize:")) { const p = val.split(":"); const ok = STAFFDASH.resize(DATA.state.tenantId, p[2], +p[3], +p[4]); render(); if (!ok) toast("Can't resize — no room or limit reached", "warn"); return; }
+    if (val === "staffdash:catalog:open") { STAFFDASH.toggleCatalog(true); return render(); }
+    if (val === "staffdash:catalog:close") { STAFFDASH.toggleCatalog(false); return render(); }
+    if (val === "staffdash:reset") { STAFFDASH.reset(DATA.state.tenantId); render(); return toast("Staff dashboard reset to default"); }
     if (val === "dbops:backup") { DBOPS.backup(DATA.state.tenantId, "now"); render(); return toast("Backup taken — this tenant only"); }
     if (val === "dbops:export") { downloadCSV("tenant_" + DATA.state.tenantId + ".csv", DW.workbook(DATA.state.tenantId)); return toast("Tenant exported (workbook CSV)"); }
     if (val.startsWith("dbops:restore:")) { DBOPS.restore(DATA.state.tenantId, val.split(":")[2]); render(); return toast("Restore from " + val.split(":")[2] + " (audited)"); }
     if (val.startsWith("dbops:platform:")) { const op = val.split(":")[2]; DBOPS.platformOp(DATA.state.tenantId, op, "operator demo"); render(); return toast("Auto-snapshot taken, then " + op + " — audited (platform.db." + op + ")"); }
     // ---- §W feature wave ----
     if (val === "sched:publish") { WORK.publish(DATA.state.tenantId); render(); return toast("Roster published — staff can see their shifts"); }
-    if (val === "sched:swap") { WORK.swap(DATA.state.tenantId, "Khamla → Souphaphone · Thu", false); render(); return toast("Swap request sent to Approvals (OT-checked)"); }
+    if (val === "sched:swap") { WORK.swap(DATA.state.tenantId, "Tinar → Souphaphone · Thu", false); render(); return toast("Swap request sent to Approvals (OT-checked)"); }
     if (val === "sched:claim") { WORK.claim(DATA.state.tenantId, "Open shift · Wed", false); render(); return toast("Open shift posted — claims land in Approvals"); }
+    /* ---- jobs schedule & shifts (SCHED) ---- */
+    if (val.startsWith("sched:nav:")) { SCHED.nav(val.split(":")[2]); return render(); }
+    if (val === "sched:today") { SCHED.toToday(); return render(); }
+    if (val.startsWith("sched:tmpl:")) { const id = val.split(":")[2]; SCHED.setTemplate(DATA.state.tenantId, id); render(); return toast("Roster template → " + (SCHED.TEMPLATES[id] ? SCHED.TEMPLATES[id].label : id)); }
+    /* ---- shift configuration: periods · users groups · shift groups ---- */
+    if (val === "sched:addperiod") return schedAddPeriod();
+    if (val.startsWith("sched:rmperiod:")) { const r = SCHED.removePeriod(DATA.state.tenantId, val.split(":")[2]); render(); return toast(r.ok ? "Shift period removed" : r.err, r.ok ? "" : "warn"); }
+    if (val === "sched:addgroup") return schedAddGroup();
+    if (val.startsWith("sched:rmgroup:")) { const r = SCHED.removeGroup(DATA.state.tenantId, val.split(":")[2]); render(); return toast(r.ok ? "Users group removed" : r.err, r.ok ? "" : "warn"); }
+    if (val === "sched:addsg") return schedAddShiftGroup();
+    if (val.startsWith("sched:rmsg:")) { SCHED.removeShiftGroup(DATA.state.tenantId, val.split(":")[2]); render(); return toast("Shift group removed (and unassigned from any days)"); }
+    /* ---- calendar assignment ---- */
+    if (val === "sched:assignmode:on") { SCHED.setAssignMode(true); return render(); }
+    if (val === "sched:assignmode:off") { SCHED.setAssignMode(false); return render(); }
+    if (val === "sched:assignsel") return schedAssignSel();
+    if (val.startsWith("sched:dayadd:")) return schedDayAdd(val.slice("sched:dayadd:".length));
+    if (val.startsWith("sched:dayremove:")) { const p = val.split(":"); SCHED.dayRemoveShift(DATA.state.tenantId, p[2], p[3]); render(); return toast("Shift removed from this day"); }
+    if (val.startsWith("sched:dayreset:")) { SCHED.dayReset(DATA.state.tenantId, val.slice("sched:dayreset:".length)); render(); return toast("Day reset to the default rota"); }
+    if (val.startsWith("sched:edit-close")) { SCHED.closeEdit(); return render(); }
+    if (val.startsWith("sched:edit:")) { SCHED.openEdit(val.slice("sched:edit:".length)); return render(); }
+    if (val.startsWith("sched:day:")) { SCHED.setSelDate(val.slice("sched:day:".length)); return render(); }
+    if (val.startsWith("sched:pick:")) { SCHED.pickDay(val.slice("sched:pick:".length)); return render(); }
+    if (val === "sched:swap-open") { SCHED.openSwap(true); return render(); }
+    if (val === "sched:swap-close") { SCHED.openSwap(false); return render(); }
+    if (val === "sched:clearsel") { SCHED.clearSel(); return render(); }
+    if (val === "sched:swap-submit") return schedSwapSubmit();
     if (val === "ewa:request") return ewaRequestDemo();
     if (val.startsWith("ewa:approve:")) { PAYROLL.ewaDecide(val.split(":")[2], "approve"); render(); return toast("Advance approved"); }
     if (val.startsWith("ewa:payout:")) { PAYROLL.ewaDecide(val.split(":")[2], "payout"); render(); return toast("Advance paid out — recovered on the next payslip"); }
@@ -337,6 +430,149 @@
     // ---- run prep: per-person adjustments → draft → commit ----
     if (val === "pay:adj-save") return paySaveDraft();
     if (val === "pay:commit") return payCommit();
+    // ---- registration + KYC ----
+    if (val === "register:submit") return registerSubmit();
+    if (val.startsWith("kyc:feature:")) { REG.setKyc(val.split(":")[2] === "on"); render(); return toast("KYC & registration " + (REG.kycOn() ? "enabled" : "disabled · related menus hidden") + " platform-wide"); }
+    if (val.startsWith("kyc:activate:")) { REG.activate(val.split(":")[2]); render(); return toast("Activated — confirmation email sent via " + REG.getChannel().provider); }
+    if (val.startsWith("kyc:reject:")) { REG.reject(val.split(":")[2], "not verified"); render(); return toast("Registration rejected (reason logged)"); }
+    if (val.startsWith("kyc:disable:")) { REG.disable(val.split(":")[2]); render(); return toast("Registration disabled"); }
+    if (val === "kyc:autodisable") { REG.setAutoDisable(!REG.autoDisable().on); render(); return toast("Auto-disable " + (REG.autoDisable().on ? "on" : "off")); }
+    if (val === "kyc:channel-save") return kycChannelSave();
+    if (val === "kyc:channel-test") { REG.testChannel(); render(); return toast("Test email queued via " + REG.getChannel().host); }
+    if (val.startsWith("profile:")) return profileAct(val);
+
+    /* ---- calendar · leave ---- */
+    if (val.startsWith("cal:nav:")) { syncLeaveType(); CAL.closeDay(); CAL.nav(val.split(":")[2]); return render(); }
+    if (val === "cal:today") { syncLeaveType(); CAL.closeDay(); CAL.state.y = 2026; CAL.state.m = 5; return render(); }
+    if (val.startsWith("cal:day:")) { CAL.openDay(val.slice("cal:day:".length)); return render(); }
+    if (val === "cal:day-close") { CAL.closeDay(); return render(); }
+    if (val.startsWith("cal:callin:")) { const u = val.slice("cal:callin:".length), p = DATA.people().find(x => x.id === u); return toast("Call-in request sent to " + (p ? p.name.split(" ")[0] : "staff") + " · in-app (LINE pending account)"); }
+    if (val === "cal:addholiday") return holidayAdd();
+    if (val === "leave:open") { CAL.openLeave(true); return render(); }
+    if (val === "leave:close") { CAL.openLeave(false); return render(); }
+    if (val === "leave:clear") { syncLeaveType(); CAL.clearSel(); return render(); }
+    if (val.startsWith("leave:pick:")) { syncLeaveType(); CAL.toggleDate(val.slice("leave:pick:".length)); return render(); }
+    if (val === "leave:submit") return leaveSubmit();
+
+    /* ---- attendance fix-request (staff → manager approval) ---- */
+    if (val === "att:fix-open") { CAL.openFix(true); return render(); }
+    if (val === "att:fix-close") { CAL.openFix(false); return render(); }
+    if (val.startsWith("att:fix-pick:")) { stashFixNote(); CAL.pickFix(val.slice("att:fix-pick:".length)); return render(); }
+    if (val === "att:fix-evidence") { stashFixNote(); CAL.attachFix(); return render(); }
+    if (val === "att:fix-submit") return attFixSubmit();
+
+    /* ---- company announcements (manager → staff Home + Inbox) ---- */
+    if (val === "ann:add") return annAdd();
+    if (val.startsWith("ann:remove:")) { ANNOUNCE.remove(DATA.state.tenantId, val.split(":")[2]); render(); return toast("Announcement removed"); }
+
+    /* ---- scheduled / recurring expenses (payroll dashboard) ---- */
+    if (val.startsWith("expense:post:")) { const r = LEDGER.postRecurring(DATA.state.tenantId, val.split(":")[2]); render(); return toast(r.ok ? "Posted to cashbook · next date rolled forward" : "Could not post", r.ok ? "" : "warn"); }
+    if (val.startsWith("expense:freq:")) { const p = val.split(":"); LEDGER.setRecurringFreq(DATA.state.tenantId, p[2], p[3]); render(); return toast("Schedule → " + p[3]); }
+    if (val === "expense:add") return expenseAdd();
+  }
+  function expenseAdd() {
+    const g = (k) => { const el = document.querySelector(`[data-rx="${k}"]`); return el ? el.value.trim() : ""; };
+    const amount = parseInt(g("amount").replace(/[^0-9]/g, ""), 10) || 0;
+    const res = LEDGER.addRecurring(DATA.state.tenantId, { name: g("name"), amount, freq: g("freq") || "monthly", cat: g("name") });
+    if (!res.ok) return toast(res.err, "warn");
+    render(); toast("Scheduled expense added · " + g("name"));
+  }
+  function schedSwapSubmit() {
+    const to = document.querySelector('[data-swapto]'), note = document.querySelector('[data-swapnote]');
+    const res = SCHED.requestSwap(DATA.state.tenantId, DATA.me().id, SCHED.selected(), to ? to.value : "", note ? note.value.trim() : "");
+    if (!res.ok) return toast(res.err, "warn");
+    render(); toast("Swap sent for your manager's approval");
+  }
+  /* ---- shift configuration form readers ---- */
+  function schedAddPeriod() {
+    const g = (k) => { const el = document.querySelector(`[data-sp="${k}"]`); return el ? el.value.trim() : ""; };
+    const res = SCHED.addPeriod(DATA.state.tenantId, { label: g("label"), start: g("start"), end: g("end"), cap: g("cap") });
+    if (!res.ok) return toast(res.err, "warn");
+    render(); toast("Shift period added · " + g("label"));
+  }
+  function schedAddGroup() {
+    const name = document.querySelector('[data-ug="label"]');
+    const ms = document.querySelector('[data-ug="members"]');
+    const members = ms ? [...ms.selectedOptions].map(o => o.value) : [];
+    const res = SCHED.addGroup(DATA.state.tenantId, { label: name ? name.value.trim() : "", members });
+    if (!res.ok) return toast(res.err, "warn");
+    render(); toast("Users group added · " + members.length + " member" + (members.length !== 1 ? "s" : ""));
+  }
+  function schedAddShiftGroup() {
+    const g = (k) => { const el = document.querySelector(`[data-sg="${k}"]`); return el ? el.value : ""; };
+    const res = SCHED.addShiftGroup(DATA.state.tenantId, { label: g("label").trim(), periodId: g("period"), groupId: g("group") });
+    if (!res.ok) return toast(res.err, "warn");
+    render(); toast("Shift group created — now assignable on the calendar");
+  }
+  function schedAssignSel() {
+    const sel = document.querySelector('[data-sg-assign]');
+    const res = SCHED.assignDays(DATA.state.tenantId, SCHED.selected(), sel ? sel.value : "");
+    if (!res.ok) return toast(res.err, "warn");
+    SCHED.clearSel(); render(); toast("Assigned to " + res.n + " day" + (res.n !== 1 ? "s" : ""));
+  }
+  function schedDayAdd(k) {
+    const sel = document.querySelector('[data-sg-add]');
+    const res = SCHED.dayAddShift(DATA.state.tenantId, k, sel ? sel.value : "");
+    if (!res.ok) return toast(res.err, "warn");
+    render(); toast("Shift added to " + CAL.fmtShort(k));
+  }
+  function stashFixNote() { const el = document.querySelector("[data-fixnote]"); if (el && window.CAL) CAL.state.fixNote = el.value; }
+  function attFixSubmit() {
+    const note = document.querySelector("[data-fixnote]"), hadEvidence = CAL.state.fixEvidence;
+    const res = CAL.submitFix(DATA.state.tenantId, DATA.me().id, CAL.state.fixDate, note ? note.value.trim() : "");
+    if (!res.ok) return toast(res.err, "warn");
+    render(); toast("Fix request sent to your manager · Approvals" + (hadEvidence ? " · evidence attached" : ""));
+  }
+  function annAdd() {
+    const g = (k) => { const el = document.querySelector(`[data-ann="${k}"]`); return el ? el.value : ""; };
+    const res = ANNOUNCE.add(DATA.state.tenantId, { title: g("title"), body: g("body"), kind: g("kind") || "immediate", date: g("date"), days: g("days") });
+    if (!res.ok) return toast(res.err, "warn");
+    render(); toast("Announcement posted — live on staff Home + Inbox");
+  }
+  function syncLeaveType() { const t = document.querySelector && document.querySelector("[data-leavetype]"); if (t) CAL.state.type = t.value; }
+  function leaveSubmit() {
+    syncLeaveType();
+    const note = document.querySelector && document.querySelector("[data-leavenote]");
+    const res = CAL.requestLeave(DATA.me().id, CAL.state.type, CAL.selected(), note ? note.value.trim() : "");
+    if (!res.ok) return toast(res.err, "warn");
+    CAL.openLeave(false); render();
+    toast("Leave requested · " + res.rec.type + " · " + res.rec.days + " day" + (res.rec.days > 1 ? "s" : "") + " → sent for approval");
+  }
+  function holidayAdd() {
+    const g = (k) => { const el = document.querySelector(`[data-hol="${k}"]`); return el ? el.value.trim() : ""; };
+    const res = CAL.addHoliday(g("date"), g("name"), g("scope") || "company");
+    if (!res.ok) return toast(res.err, "warn");
+    render(); toast("Holiday added · " + g("name") + " (audited)");
+  }
+  function profileAct(val) {
+    const p = val.split(":"), op = p[1], uid = p[2];
+    if (op === "photo") { PROFILE.setPhoto(uid); render(); return toast("Profile photo uploaded — now shows on this person's icon (demo)"); }
+    if (op === "edit") { PROFILE.setEditing(uid + ":" + p[3]); return render(); }
+    if (op === "cancel") { PROFILE.setEditing(null); return render(); }
+    if (op === "save") {
+      const obj = {};
+      (document.querySelectorAll ? document.querySelectorAll("[data-pf]") : []).forEach(el => { obj[el.getAttribute("data-pf")] = el.value; });
+      PROFILE.set(uid, obj); PROFILE.setEditing(null); render(); toast("Saved · people.updated (audited)");
+    }
+  }
+  function registerSubmit() {
+    const g = (k) => { const el = document.querySelector(`[data-reg="${k}"]`); return el ? el.value.trim() : ""; };
+    if (!g("company") || !g("email")) return toast("Company and email are required", "warn");
+    if (g("email2") && g("email") !== g("email2")) return toast("The two email addresses don't match", "warn");
+    const form = { company: g("company"), owner: g("owner") || "(owner)", email: g("email"), phone: g("phone"), lang: g("lang") || "lo", entity: g("entity") || "sole", biz: g("biz") || "services" };
+    if (window.REG && REG.kycOn()) {
+      const reg = AUTHV.state.reg, both = !!(reg.idUrl && reg.selfieUrl);
+      REG.submit(Object.assign(form, { idType: "National ID card", match: both ? "strong" : "review" }));
+      reg.idUrl = reg.idName = reg.selfieUrl = reg.selfieName = null; // clear for the next applicant
+    } else {
+      REG.registerInstant(form); // no-KYC → instant active + access-link email
+    }
+    go("register/done");
+  }
+  function kycChannelSave() {
+    const g = (k) => { const el = document.querySelector(`[data-ch="${k}"]`); return el ? el.value.trim() : ""; };
+    REG.setChannel({ provider: g("provider") || "SMTP", host: g("host"), port: parseInt(g("port"), 10) || 465, from: g("from") });
+    render(); toast("Email channel saved · " + REG.getChannel().status);
   }
   function paySaveDraft() {
     const tid = DATA.state.tenantId, by = {};
@@ -368,12 +604,6 @@
     if (!res.ok) return toast(res.err, "warn");
     render();
     toast((FLAGS.REGISTRY[fe] ? FLAGS.REGISTRY[fe].label : fe) + " → " + (FLAGS.on(tid, fe) ? "on" : "off"));
-  }
-  function approveRegister() {
-    APPROVALS.register({ key: "doc_ack", label: "Document acknowledgement", protective: false, check: "signed" });
-    APPROVALS.request(DATA.state.tenantId, "doc_ack", { who: "All staff", detail: "Acknowledge updated handbook" });
-    render();
-    toast("New approvable type registered by config — no new code");
   }
 
   /* ---- engine action helpers ---- */
@@ -425,14 +655,72 @@
   }
 
   document.addEventListener("click", (e) => {
+    // A pure-cosmetic demo switch (no wired action) flips visually. A switch WITH a
+    // data-act must fall through to its handler — don't shadow it (that silently
+    // broke the Functions flag board + the platform KYC auto-disable toggle).
     const sw = e.target.closest(".switch");
-    if (sw) { const on = sw.getAttribute("aria-checked") === "true"; sw.setAttribute("aria-checked", String(!on)); return toast((!on ? "Enabled" : "Disabled") + " · per-tenant flag (demo)"); }
+    if (sw && !sw.hasAttribute("data-act")) { const on = sw.getAttribute("aria-checked") === "true"; sw.setAttribute("aria-checked", String(!on)); return toast((!on ? "Enabled" : "Disabled") + " · per-tenant flag (demo)"); }
     const actEl = e.target.closest("[data-act]");
     if (actEl) { e.preventDefault(); return doAct(actEl.getAttribute("data-act")); }
     const goEl = e.target.closest("[data-go]");
     if (goEl) { e.preventDefault(); return go(goEl.getAttribute("data-go")); }
+    // Honest fallback: an unwired primary button is a demo stub, not a silent dead-end.
+    const dead = e.target.closest(".btn, .ch-btn");
+    if (dead && !dead.disabled) { e.preventDefault(); const label = (dead.textContent || "").trim().replace(/\s+/g, " "); return toast((label ? "“" + label + "” — " : "") + "preview button; this action is wired in a later pass.", "warn"); }
   });
+  // ---- staff-dashboard builder: drag to move / drag corner to resize (buttons are the fallback) ----
+  (function () {
+    let st = null;
+    function geom(grid) {
+      const r = grid.getBoundingClientRect(), cs = getComputedStyle(grid);
+      const cols = parseInt(grid.style.getPropertyValue("--cols")) || 4;
+      const colGap = parseFloat(cs.columnGap) || 12, rowGap = parseFloat(cs.rowGap) || 12;
+      const rowH = parseFloat(cs.gridAutoRows) || 120;
+      return { cols, cw: (r.width - colGap * (cols - 1)) / cols + colGap, ch: rowH + rowGap };
+    }
+    document.addEventListener("pointerdown", (e) => {
+      const grid = e.target.closest("[data-dbx]"); if (!grid) return;
+      if (e.target.closest("button")) return; // let the on-card buttons act
+      const rz = e.target.closest("[data-resize]"), mv = e.target.closest("[data-drag]");
+      const kind = rz ? "resize" : mv ? "move" : null; if (!kind) return;
+      const id = (rz || mv).getAttribute(rz ? "data-resize" : "data-drag"); if (!id) return;
+      const w = STAFFDASH.get(DATA.state.tenantId, id), el = grid.querySelector('.dbx-widget[data-wid="' + id + '"]');
+      if (!w || !el) return;
+      st = { kind, id, grid, g: geom(grid), sx: e.clientX, sy: e.clientY, o: { x: w.x, y: w.y, w: w.w, h: w.h }, el, live: null };
+      el.classList.add("dragging"); grid.classList.add("dbx-live");
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      e.preventDefault();
+    });
+    document.addEventListener("pointermove", (e) => {
+      if (!st) return;
+      const dx = Math.round((e.clientX - st.sx) / st.g.cw), dy = Math.round((e.clientY - st.sy) / st.g.ch);
+      const COLS = STAFFDASH.COLS, MAXH = STAFFDASH.MAXH;
+      let x, y, w, h;
+      if (st.kind === "move") { w = st.o.w; h = st.o.h; x = Math.max(0, Math.min(COLS - w, st.o.x + dx)); y = Math.max(0, st.o.y + dy); }
+      else { x = st.o.x; y = st.o.y; w = Math.max(1, Math.min(COLS - st.o.x, st.o.w + dx)); h = Math.max(1, Math.min(MAXH, st.o.h + dy)); }
+      const valid = !STAFFDASH.collides(DATA.state.tenantId, st.id, { x, y, w, h });
+      st.live = { x, y, w, h, valid };
+      st.el.style.gridColumn = (x + 1) + "/span " + w;
+      st.el.style.gridRow = (y + 1) + "/span " + h;
+      st.el.classList.toggle("invalid", !valid);
+    });
+    function endDrag() {
+      if (!st) return; const s = st; st = null;
+      s.el.classList.remove("dragging", "invalid"); s.grid.classList.remove("dbx-live");
+      if (s.live && s.live.valid && (s.live.x !== s.o.x || s.live.y !== s.o.y || s.live.w !== s.o.w || s.live.h !== s.o.h)) STAFFDASH.setRect(DATA.state.tenantId, s.id, s.live);
+      render();
+    }
+    document.addEventListener("pointerup", endDrag);
+    document.addEventListener("pointercancel", endDrag);
+  })();
+
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (window.CAL && CAL.state.dayOpen) { e.preventDefault(); CAL.closeDay(); return render(); }
+      if (window.CAL && CAL.state.fixOpen) { e.preventDefault(); CAL.openFix(false); return render(); }
+      if (window.CAL && CAL.state.leaveOpen) { e.preventDefault(); CAL.openLeave(false); return render(); }
+      if (window.SCHED && SCHED.state.editDate) { e.preventDefault(); SCHED.closeEdit(); return render(); }
+    }
     if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches('[role="button"][data-go], [role="button"][data-act]')) {
       e.preventDefault();
       const g = e.target.getAttribute("data-go"), a = e.target.getAttribute("data-act");
@@ -444,6 +732,19 @@
     if (ts) { DATA.setTenant(ts.value); render(); return toast("Switched to " + DATA.cur().name); }
     const ps = e.target.closest("[data-payslip]");
     if (ps) { return go("owner/web/payslips/" + ps.value); }
+    // KYC ID/selfie upload — update only that dropzone in place (don't re-render: keep the typed fields)
+    const fin = e.target.closest("[data-regfile]");
+    if (fin && window.AUTHV) {
+      const kind = fin.getAttribute("data-regfile"), f = fin.files && fin.files[0];
+      if (f) {
+        const url = URL.createObjectURL(f);
+        if (kind === "id") { AUTHV.state.reg.idUrl = url; AUTHV.state.reg.idName = f.name; }
+        else { AUTHV.state.reg.selfieUrl = url; AUTHV.state.reg.selfieName = f.name; }
+        const inner = document.querySelector(`[data-dropinner="${kind}"]`);
+        if (inner) inner.innerHTML = AUTHV.dropInner(kind);
+      }
+      return;
+    }
     const acct = e.target.closest("[data-acct]");
     if (acct) { const a = AUTH.find(acct.value); const pwd = document.querySelector(`[data-pwd="${acct.dataset.acct}"]`); if (a && pwd) pwd.value = a.pwd; }
   });
@@ -451,6 +752,7 @@
   // scroll shadow on topbar
   addEventListener("scroll", () => { document.body.dataset.scrolled = window.scrollY > 6 ? "true" : "false"; }, { passive: true });
 
-  window.addEventListener("hashchange", render);
+  // navigation closes any open modal / mobile sub-flow (so a back arrow returns to the parent, not the form)
+  window.addEventListener("hashchange", () => { if (window.CAL && CAL.closeDay) { CAL.closeDay(); CAL.openFix(false); CAL.openLeave(false); } render(); });
   render();
 })();

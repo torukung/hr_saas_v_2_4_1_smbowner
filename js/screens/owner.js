@@ -20,33 +20,103 @@ window.SCR_OWNER = (function () {
     });
     return rows;
   }
+  const daysTo = (iso) => { const today = (window.CAL && CAL.TODAY) || "2026-06-16"; return Math.max(0, Math.round((new Date(iso) - new Date(today)) / 86400000)); };
+  function recurList(list) {
+    const seg = (e) => `<div class="seg sm rx-seg">${["weekly", "monthly", "yearly"].map(f => `<button aria-pressed="${f === e.freq}" data-act="expense:freq:${e.id}:${f}">${f[0].toUpperCase()}</button>`).join("")}</div>`;
+    const rows = list.map(e => `<div class="rxrow">
+      <div class="rx-main"><div class="rx-name">${e.name}</div><div class="rx-sub">${e.cat} · next ${CAL.fmtShort(e.next)}</div></div>
+      <div class="rx-amt num">${kip(e.amount)}</div>${seg(e)}
+      <button class="btn xs soft" data-act="expense:post:${e.id}">${icon("plus")} Post</button>
+    </div>`).join("");
+    const fopt = ["monthly", "weekly", "yearly"].map(f => `<option value="${f}">${f}</option>`).join("");
+    const addf = `<div class="dbform" style="margin-top:12px">
+      <input class="input" data-rx="name" placeholder="Expense name">
+      <input class="input" data-rx="amount" placeholder="Amount ₭" inputmode="numeric">
+      <select class="input" data-rx="freq">${fopt}</select>
+      <button class="btn" data-act="expense:add">${icon("plus")} Schedule</button>
+    </div>`;
+    return `<div class="rxlist">${rows}</div><p class="small muted" style="margin:10px 0 0">Post drops it into the cashbook as an expense and rolls the date forward. W / M / Y sets the cadence.</p>${addf}`;
+  }
+  // Manager Dashboard "Alerts & communication" composer + live list (feeds staff Home + Inbox)
+  function annComposer() {
+    return `<div class="ann-compose">
+      <div class="field"><label>Message *</label><input class="input" data-ann="title" placeholder="e.g. Shop closes early this Friday"></div>
+      <div class="field"><label>Detail <span class="small muted">· optional</span></label><textarea class="input" data-ann="body" rows="2" placeholder="A line of context for the team"></textarea></div>
+      <div class="ann-grid">
+        <div class="field"><label>When</label><select class="input" data-ann="kind"><option value="immediate">Immediate alert</option><option value="scheduled">Schedule for a date</option><option value="period">Show for a period</option></select></div>
+        <div class="field"><label>Publish date <span class="small muted">· if scheduled</span></label><input class="input" type="date" data-ann="date" value="2026-06-18"></div>
+        <div class="field"><label>Stay shown · days <span class="small muted">· if period</span></label><input class="input" type="number" min="1" max="60" data-ann="days" value="7"></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn sm" data-act="ann:add">${icon("send")} Post announcement</button><span class="small muted">Lands on staff Home + Inbox · in-app · LINE · EN · ລາວ</span></div>
+    </div>`;
+  }
+  function annList(tid) {
+    const items = ANNOUNCE.list(tid);
+    return items.length ? rowlist(items.map(a => rowitem({
+      icon: "megaphone", title: a.title, sub: ANNOUNCE.statusLabel(a) + " · " + a.channel,
+      side: `<button class="btn xs ghost" data-act="ann:remove:${a.id}">${icon("x")} Remove</button>`
+    }))) : empty("megaphone", "No announcements", "Post one above — staff see it on Home + Inbox");
+  }
+  // resolve an approval's person/team from its "who" (handles "Tinar → Souphaphone" composites)
+  function apprPerson(i) { const nm = (i.who || "").split(/→|·/)[0].trim().split(" ")[0]; return DATA.people().find(x => x.name.split(" ")[0] === nm); }
+  function apprTeam(i) { const p = apprPerson(i); return p ? p.team : "Other"; }
 
   const web = {
-    /* ---------------- DASHBOARD (cockpit) ---------------- */
+    /* ---------------- MANAGER DASHBOARD (operations · no money) ---------------- */
     dashboard() {
-      const t = T(), a = DATA.ATT_TODAY, r = LEDGER.rollup(t.id), run = PAYROLL.getRun(t.id), ser = DW.series(t.id);
+      const t = T(), a = DATA.ATT_TODAY, ppl = DATA.people(t.id);
+      const cnt = { present: 0, late: 0, onleave: 0, absent: 0 };
+      ppl.forEach(p => { cnt[p.status] = (cnt[p.status] || 0) + 1; });
+      const onLeave = ppl.filter(p => p.status === "onleave");
+      const pendLeave = DATA.LEAVE_REQS.filter(l => l.status === "pending").length;
+      const pendAppr = APPROVALS.pending(t.id);
       return {
-        title: `${t.name}`, sub: "The cockpit — who's in, what's owed, what's the cash, what's running out",
-        actions: `<button class="btn ghost sm" data-go="owner/web/cashbook">${icon("plus")} Quick entry</button><button class="btn sm" data-go="owner/web/pay-runs">${icon("banknote")} Run payroll</button>`,
+        title: `${t.name}`, sub: "Manager view — who's on the job today, the team calendar, and what needs you",
+        actions: `<button class="btn ghost sm" data-go="owner/web/calendar">${icon("calendar")} Team calendar</button><button class="btn sm" data-go="owner/web/approvals">${icon("check")} Approvals</button>`,
         body: `
         <div class="tilegrid" style="margin-bottom:16px">
-          ${tile({ label: "Today · attendance", icon: "users", value: `${a.in} / ${a.total}`, sub: `<span class="badge warn">${a.flags} flags</span> <span class="badge plain">${a.leave} leave</span>`, accent: true, go: "owner/web/attendance" })}
-          ${tile({ label: "Payroll · this month", icon: "banknote", value: kip(run.totals.cost), sub: `<span class="badge ${run.state === "close" ? "ok" : "plain"}">${run.state}</span> <span class="badge acc">PIT ${kip(run.totals.pit)}</span>`, go: "owner/web/pay-runs" })}
-          ${tile({ label: "Cash · month result", icon: "trend", value: (r.result >= 0 ? "+" : "") + kip(r.result), sub: `<span class="badge ok">rev ${(r.revenue / 1e6).toFixed(0)}M</span> <span class="badge bad">staff ${(r.staffCost / 1e6).toFixed(1)}M</span>`, go: "owner/web/costbenefit" })}
-          ${FLAGS.on(t.id, "labourcost") ? (() => { const dayRev = LEDGER.sums(LEDGER.ranged(t.id, "day")).rev, dayWage = Math.round(run.totals.cost / 26), m = dayRev ? Math.round((dayRev - dayWage) / dayRev * 100) : 0; return tile({ label: "Labour cost · today", icon: "pulse", value: m + "%", sub: `margin · wage ${(dayWage / 1e6).toFixed(1)}M vs rev ${(dayRev / 1e6).toFixed(1)}M`, go: "owner/web/costbenefit" }); })() : ""}
+          ${tile({ label: "Today · on the job", icon: "users", value: `${a.in} / ${a.total}`, sub: `<span class="badge ok">${cnt.present} present</span> <span class="badge warn">${cnt.late} late</span>`, accent: true, go: "owner/web/attendance" })}
+          ${tile({ label: "On leave today", icon: "calCheck", value: String(cnt.onleave), sub: cnt.onleave ? onLeave.map(p => p.name.split(" ")[0]).join(" · ") : "everyone in", go: "owner/web/leave" })}
+          ${tile({ label: "Absent / no-show", icon: "alert", value: String(cnt.absent), sub: cnt.absent ? "follow up" : "none today", go: "owner/web/attendance" })}
+          ${tile({ label: "Geofence flags", icon: "pin", value: String(a.flags), sub: "to review · never blocked", go: "owner/web/attendance" })}
         </div>
         <div class="grid cols-2">
-          ${card("Capacity this cycle", `<div class="capstrip">
+          ${card("Needs you", rowlist([
+          rowitem({ icon: "calCheck", title: `${pendLeave} leave request${pendLeave !== 1 ? "s" : ""} waiting`, sub: "review & decide", side: `<button class="btn xs soft" data-go="owner/web/leave">Review</button>` }),
+          rowitem({ icon: "check", title: `${pendAppr} approvals in the inbox`, sub: "swaps · OT · advances", side: `<button class="btn xs soft" data-go="owner/web/approvals">Open</button>` }),
+          rowitem({ icon: "pin", title: `${a.flags} geofence flags to clear`, sub: "punches are never auto-blocked", side: `<button class="btn xs soft" data-go="owner/web/attendance">Open</button>` })
+        ]), { icon: "bell" })}
+          ${card("This cycle · system resources", `<div class="capstrip">
             ${segMeter("Staff seats", t.seats.staff.used + t.seats.manager.used + t.seats.admin.used, 14)}
             ${segMeter("LINE messages", t.quota.line.used, t.quota.line.limit)}
             ${segMeter("WhatsApp", t.quota.whatsapp.used, t.quota.whatsapp.limit)}
             ${segMeter("Storage (GB)", t.storage.used, t.storage.limit, { unit: "GB" })}
           </div>`, { icon: "gauge", link: "owner/web/plan", linkLabel: "Manage" })}
-          ${card("Needs you", rowlist([
-          rowitem({ icon: "calCheck", title: "2 leave requests waiting", sub: "Souphaphone · Khamphan", side: `<button class="btn xs soft" data-go="owner/web/leave">Review</button>` }),
-          rowitem({ icon: "pin", title: "2 geofence flags to clear", sub: "Daophet · 1 other", side: `<button class="btn xs soft" data-go="owner/web/attendance">Open</button>` }),
-          rowitem({ icon: "percent", title: `PIT ${kip(run.totals.pit)} + NSSF due 20 Jun`, sub: "figures ready", side: `<button class="btn xs soft" data-go="owner/web/tax">File</button>` })
-        ]), { icon: "bell" })}
+        </div>
+        <div style="height:16px"></div>
+        ${card("Alerts & communication", annComposer() + `<div style="height:14px"></div>` + annList(t.id), { icon: "megaphone", badge: `<span class="badge plain">${ANNOUNCE.list(t.id).length} live</span>` })}
+        <div style="height:16px"></div>
+        ${card("Team calendar · " + CAL.MONTHS[CAL.state.m] + " " + CAL.state.y, CAL.navBar() + CAL.teamGrid(t.id) + CAL.teamLegend(), { icon: "calendar", link: "owner/web/calendar", linkLabel: "Open full" })}`
+      };
+    },
+    /* ---------------- PAYROLL DASHBOARD (the money cockpit) ---------------- */
+    "pay-dashboard"() {
+      const t = T(), r = LEDGER.rollup(t.id), run = PAYROLL.getRun(t.id), ser = DW.series(t.id);
+      const days = daysTo("2026-06-25"), top = LEDGER.topExpenses(t.id, 5), rec = LEDGER.recurring(t.id);
+      const maxExp = top.length ? Math.max(1, Math.ceil(top[0].amount / 1e6)) : 1;
+      return {
+        title: "Payroll & money", sub: "The money cockpit — payroll, cash, revenue & expenses",
+        actions: `<button class="btn ghost sm" data-go="owner/web/cashbook">${icon("plus")} Quick entry</button><button class="btn sm" data-go="owner/web/pay-runs">${icon("banknote")} Run payroll</button>`,
+        body: `
+        <div class="tilegrid" style="margin-bottom:16px">
+          ${tile({ label: "Payroll · this month", icon: "banknote", value: kip(run.totals.cost), sub: `<span class="badge ${run.state === "close" ? "ok" : "plain"}">${run.state}</span> <span class="badge acc">PIT ${kip(run.totals.pit)}</span>`, accent: true, go: "owner/web/pay-runs" })}
+          ${tile({ label: "Days to pay date", icon: "calendar", value: String(days), sub: "pay date · 25 Jun", go: "owner/web/pay-runs" })}
+          ${tile({ label: "Cash · month result", icon: "trend", value: (r.result >= 0 ? "+" : "") + kip(r.result), sub: `margin ${(r.margin * 100).toFixed(0)}%`, go: "owner/web/costbenefit" })}
+          ${tile({ label: "Revenue · this month", icon: "trend", value: kip(r.revenue), sub: `staff ${(r.staffCost / 1e6).toFixed(1)}M · ${(r.staffRatio * 100).toFixed(0)}% of rev`, go: "owner/web/costbenefit" })}
+        </div>
+        <div class="grid cols-2">
+          ${card("This month · top expenses", top.length ? bars(top.map(e => ({ l: e.cat, v: Math.round(e.amount / 1e5) / 10, tone: "" })), { values: true, max: maxExp }) + `<p class="small muted" style="margin-top:8px">From the cashbook (₭M). Staff cost posts here when payroll closes.</p>` : empty("book", "No expenses yet", "Add entries in the cashbook"), { icon: "trend", link: "owner/web/cashbook", linkLabel: "Cashbook" })}
+          ${card("Waiting · scheduled expenses", recurList(rec), { icon: "calCheck", badge: `<span class="badge warn">${rec.length} recurring</span>` })}
         </div>
         <div style="height:16px"></div>
         ${card("Revenue vs staff-cost — 6 months (derived)", lines2(ser.map(s => Math.round(s.revenue / 1e5) / 10), ser.map(s => Math.round(s.staffCost / 1e5) / 10), ser.map(s => s.month), { fmt: millM }) + UI.legend([{ c: "var(--acc)", l: "Revenue (₭M)" }, { c: "var(--muted-2)", l: "Staff cost (₭M)" }]), { icon: "chart" })}`
@@ -55,22 +125,38 @@ window.SCR_OWNER = (function () {
 
     /* ---------------- 2.1 STAFF MANAGER ---------------- */
     people() {
-      const ppl = DATA.people();
+      const tid = T().id, teams = DATA.teamsFor(tid), total = DATA.people(tid).length;
+      const stat = (p) => p.status === "present" ? badge("present") : p.status === "late" ? badge("late") : p.status === "onleave" ? badge("onleave") : badge("absent");
+      // each person carries a slightly different background tint of the team colour ("different colour per person")
+      const member = (p, i) => `<div class="team-member" style="background:color-mix(in srgb, var(--tc) ${7 + (i % 4) * 5}%, var(--surface))" data-go="owner/web/people-profile/${p.id}" role="button" tabindex="0">
+        ${PROFILE.avatar(p.id, { xs: true })}
+        <div class="tm-main"><span class="tm-name">${p.name}${p.you ? ' <span class="badge acc">you</span>' : ""}</span><span class="tm-sub">${p.role} · ${kip(p.base)}/mo</span></div>
+        <span class="badge ${p.access === "owner" ? "acc" : "plain"}">${p.access}</span>${stat(p)}
+      </div>`;
+      const teamCard = (t) => `<div class="team-card" style="--tc:var(--${t.hue});--tcb:var(--${t.hue}-bg);--tcl:var(--${t.hue}-ln)">
+        <div class="team-head"><span class="team-mark">${icon("users")}</span><div class="team-id"><span class="team-name">${t.label}</span><span class="team-sub">${t.members.length} ${t.members.length === 1 ? "person" : "people"}</span></div><span class="team-count">${t.members.length}</span></div>
+        <div class="team-members">${t.members.map((p, i) => member(p, i)).join("")}</div>
+      </div>`;
       return {
-        title: "People", sub: T().name + " · profiles, contracts, comp & onboarding",
+        title: "People", sub: T().name + " · grouped by team",
         actions: `<button class="btn sm">${icon("userPlus")} Add person</button>`,
-        body: band("users", "Staff Manager · People", "Every worker in this tenant — role, division, comp profile and access.") +
-          card("Roster", table(
-            [{ h: "Name" }, { h: "Role" }, { h: "Division" }, { h: "Base / mo", r: true }, { h: "Access" }, { h: "Today" }],
-            ppl.map(p => ({
-              cells: [
-                `<b>${p.name}</b> ${p.you ? '<span class="badge acc">you-seed</span>' : ""}`, p.role, p.div,
-                `<span class="num">${kip(p.base)}</span>`,
-                `<span class="badge ${p.access === "owner" ? "acc" : "plain"}">${p.access}</span>`,
-                p.status === "present" ? badge("present") : p.status === "late" ? badge("late") : p.status === "onleave" ? badge("onleave") : badge("absent")
-              ]
-            }))
-          ), { icon: "users", badge: `<span class="badge plain">${ppl.length} of ${T().headcount}</span>` })
+        body: band("users", "Staff Manager · People", "Every worker, grouped by their team — each team carries its own accent, and each person a tint of it. Tap anyone to open their profile.") +
+          `<div class="statline" style="margin-bottom:16px">${teams.map(t => `<div class="sl-it"><span class="sl-v num" style="color:var(--${t.hue}-d)">${t.members.length}</span><span class="sl-l">${t.label}</span></div>`).join("")}<div class="sl-it"><span class="sl-v num">${total}</span><span class="sl-l">of ${T().headcount} total</span></div></div>` +
+          `<div class="team-stack">${teams.map(teamCard).join("")}</div>`
+      };
+    },
+    "people-profile"(param) {
+      const parts = (param || "").split("/"), uid = parts[0], section = parts[1] || "general";
+      const ppl = DATA.people(), p = ppl.find(x => x.id === uid) || ppl[0];
+      const prof = PROFILE.get(p.id);
+      return {
+        title: "People · " + p.name, sub: prof.position + " · " + prof.department,
+        actions: `<button class="btn ghost sm" data-go="owner/web/people">${icon("chevL")} Roster</button>`,
+        body: PROFILE.page(p.id, section, {
+          edit: true, editing: PROFILE.getEditing(),
+          tabHref: (s) => "owner/web/people-profile/" + p.id + "/" + s,
+          headerRight: `<span class="badge ${p.access === "owner" ? "acc" : "plain"}">${p.access}</span><button class="btn ghost sm" data-act="toast:All actions — demo">${icon("dots")} All actions</button>`
+        })
       };
     },
     attendance() {
@@ -89,18 +175,49 @@ window.SCR_OWNER = (function () {
       };
     },
     scheduling() {
-      const tid = T().id, wk = WORK.week(tid), pub = WORK.isPublished(tid), canSwap = FLAGS.on(tid, "shiftswap");
+      const tid = T().id, tmpl = SCHED.tmplOf(tid), T_ = SCHED.TEMPLATES, multi = tmpl === "multi";
+      const swaps = APPROVALS.inbox(tid).filter(i => i.type === "swap" || i.type === "claim");
+      const seg = Object.keys(T_).map(id => `<button aria-pressed="${tmpl === id}" data-act="sched:tmpl:${id}">${T_[id].label} · ${T_[id].sub}</button>`).join("");
+      const calBody = (multi ? SCHED.assignToolbar(tid) : "") + SCHED.calendar(tid) + (multi ? SCHED.assignBar(tid) : "");
       return {
-        title: "Scheduling", sub: "Roster · templates · swap / open-shift approvals · Lao holidays",
-        actions: `<button class="btn ghost sm">${icon("calendar")} New template</button><button class="btn sm" data-act="sched:publish">${icon("send")} ${pub ? "Re-publish" : "Publish"} week</button>`,
-        body: band("calendar", "Staff Manager · Scheduling", "Build from a template, publish to staff; swaps & open-shift claims arrive on the approval engine, OT-guarded.") +
-          `<div class="grid cols-2">
-            ${card("This week", bars(wk.map(s => ({ l: s.day, v: s.assigned + s.open, tone: s.open ? "warn" : "" })), { values: true, max: 9 }) + `<p class="small muted" style="margin-top:8px">Amber = has an open shift to fill. ${pub ? "Staff can see their shifts." : "Publish to push to staff."}</p>`, { icon: "calendar", badge: pub ? `<span class="badge ok">published</span>` : `<span class="badge warn">draft</span>` })}
-            ${card("Templates & requests", rowlist(WORK.templates.map(tp => rowitem({ icon: "calendar", title: tp, neutral: true, side: `<button class="btn xs ghost" data-act="sched:publish">Apply</button>` }))) +
-            (canSwap
-              ? `<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn xs soft" data-act="sched:swap">${icon("swap")} New swap → review</button><button class="btn xs soft" data-act="sched:claim">${icon("userPlus")} Post open shift</button></div>`
-              : `<div class="seal-note" style="margin-top:12px">${icon("lock")} Shift swap & open-shift is off in Functions — turn it on to let staff swap.</div>`),
-            { icon: "swap", badge: `<button class="btn xs ghost" data-go="owner/web/approvals">${APPROVALS.pending(tid)} in approvals</button>` })}
+        title: "Jobs schedule & shifts", sub: "Templates · shift configuration · 3-month roster calendar · swaps",
+        actions: `<button class="btn ghost sm" data-go="owner/web/approvals">${icon("check")} Approvals (${APPROVALS.pending(tid)})</button>`,
+        body: band("calendar", "Staff Manager · Jobs schedule & shifts", "Pick a template. On Multi-shift, build shift periods, users groups and shift groups, then select day(s) and assign. Click a day to edit its shifts; shifts can overlap; swaps need your approval.") +
+          card("Roster template", `<div class="seg" style="flex-wrap:wrap;margin-bottom:8px">${seg}</div><p class="small muted">${T_[tmpl].note}</p>`, { icon: "sliders" }) +
+          (multi ? `<div style="height:16px"></div>` + card("Shift configuration", `<p class="small muted" style="margin-bottom:12px">Build the building blocks once — a <b>shift group</b> binds a period (when) to a users group (who), and is what you drop onto days.</p>` + SCHED.config(tid), { icon: "layers", badge: `<span class="badge plain">${SCHED.cfg(tid).shiftGroups.length} shift groups</span>` }) : "") +
+          `<div style="height:16px"></div>` +
+          card("Roster calendar", calBody, { icon: "calendar", badge: `<span class="badge plain">${T_[tmpl].label}</span>` }) +
+          (multi ? SCHED.dayEditor(tid) : (SCHED.state.selDate ? `<div style="height:16px"></div>${SCHED.dayDetail(tid)}` : "")) +
+          `<div style="height:16px"></div>` +
+          card("Shift-swap approvals", swaps.length ? rowlist(swaps.map(s => rowitem({
+            icon: "swap", title: s.who, sub: s.detail,
+            side: `<button class="btn xs soft" data-act="approve:${s.id}:approve">Approve</button> <button class="btn xs ghost" data-act="approve:${s.id}:reject">Decline</button>`
+          }))) : empty("swap", "No swap requests", "Staff swap requests land here and on your dashboard"), { icon: "swap", badge: `<span class="badge ${swaps.length ? "warn" : "plain"}">${swaps.length} waiting</span>` })
+      };
+    },
+    calendar() {
+      const tid = T().id, tm = CAL.teamMonth(tid), hols = tm.holidays;
+      const holDate = CAL.state.y + "-" + String(CAL.state.m + 1).padStart(2, "0") + "-15";
+      return {
+        title: "Team Absence Calendar", sub: "Availability at a glance · leave · sick · shifts · holidays",
+        actions: `<button class="btn ghost sm" data-go="owner/web/scheduling">${icon("calendar")} Scheduling</button>`,
+        body: band("calendar", "Staff Manager · Team Absence Calendar", "Who's available, who's off, and why — leave, sick, weekly rest, split & picked-up shifts (synced from Scheduling), with Lao public holidays blocked out for everyone.") +
+          `<div class="grid cols-3" style="margin-bottom:16px">
+            ${kpi("On leave · " + CAL.MONTHS[tm.m], tm.onleave + "<small> days</small>", "across the team")}
+            ${kpi("Sick · month", tm.sick + "<small> days</small>", "this month")}
+            ${kpi("Public holidays", String(hols.length), hols.length ? hols.map(h => CAL.fmtShort(h.date)).join(" · ") : "none this month")}
+          </div>` +
+          card("Month", CAL.navBar() + CAL.teamGrid(tid) + CAL.teamLegend(), { icon: "calendar", badge: `<span class="badge plain">${tm.rows.length} staff</span>` }) +
+          `<div style="height:16px"></div>
+          <div class="grid cols-2">
+            ${card("Add a holiday", `<p class="small muted" style="margin-bottom:10px">Add a public or company holiday — it blocks out the column for everyone and shows on staff calendars.</p>
+              <div class="dbform">
+                <input class="input" type="date" data-hol="date" value="${holDate}">
+                <input class="input" data-hol="name" placeholder="Holiday name (e.g. Boun That Luang)">
+                <select class="input" data-hol="scope"><option value="company">Company</option><option value="public">Public</option></select>
+                <button class="btn" data-act="cal:addholiday">${icon("plus")} Add holiday</button>
+              </div>`, { icon: "calCheck" })}
+            ${card("Upcoming holidays", rowlist(CAL.upcoming(5).map(h => rowitem({ icon: "calendar", title: h.name, sub: CAL.fmtShort(h.date) + " · 2026", neutral: true, side: badge(h.scope === "public" ? "plain" : "ok") }))), { icon: "list" })}
           </div>`
       };
     },
@@ -110,7 +227,8 @@ window.SCR_OWNER = (function () {
         title: "Leave", sub: "Approvals · balances · leave types · accrual",
         body: band("calCheck", "Staff Manager · Leave", "Balance is auto-checked before it reaches you; approve and it debits + lands on the calendar.") +
           card("Requests", rowlist(reqs.map(l => rowitem({
-            icon: "calendar", title: `${l.who} · ${l.type} ${l.days}d`, sub: `from ${l.from}`,
+            icon: l.tone === "sick" ? "alert" : "calendar", title: `${l.who} · ${l.type} ${l.days}d`,
+            sub: `${CAL.fmtRange(l.from, l.to || l.from)}${l.note ? ` · “${l.note}”` : ""}`,
             side: l.status === "pending" ? `<button class="btn xs soft">Approve</button> <button class="btn xs ghost">Decline</button>` : badge(l.status)
           }))), { icon: "calCheck", badge: `<span class="badge warn">${reqs.filter(r => r.status === "pending").length} pending</span>` })
       };
@@ -131,40 +249,68 @@ window.SCR_OWNER = (function () {
       };
     },
     access() {
+      const admin = DATA.cur().owner || "Owner", dom = DATA.cur().id;
+      const openSeat = `${rowitem({ icon: "userPlus", title: "Open seat", sub: "Invite a manager or admin to this shop", neutral: true, side: `<button class="btn xs soft" data-act="access:add">${icon("plus")} Add</button>` })}`;
       return {
-        title: "Access & invites", sub: "Logins · roles · activation · offboard",
-        body: band("key", "Staff Manager · Access", "Access is an option on a person — switch it on, the invite lands, the username decides the landing.") +
-          card("Accounts", table([{ h: "Person" }, { h: "Email" }, { h: "Role" }, { h: "Status" }, { h: "" }], [
-            { cells: ["Somchai P.", "owner@phoungern.la", `<span class="badge acc">owner</span>`, badge("active"), `<button class="btn xs ghost">Manage</button>`] },
-            { cells: ["Bouasone V.", "manager@phoungern.la", `<span class="badge plain">manager</span>`, badge("active"), `<button class="btn xs ghost">Manage</button>`] },
-            { cells: ["Khamla S.", "staff@phoungern.la", `<span class="badge plain">staff</span>`, badge("active"), `<button class="btn xs ghost">Manage</button>`] },
-            { cells: ["Davone K.", "davone@phoungern.la", `<span class="badge plain">staff</span>`, badge("pending"), `<button class="btn xs ghost">Resend</button>`] }
-          ]), { icon: "key" })
+        title: "Manager & Admin", sub: "Admins & managers for this shop — 1 from registration · 2 open seats",
+        body: band("key", "Staff Manager · Manager & Admin", "The admin created at registration, plus up to two more managers/admins you can invite. Staff logins are managed per-person under People.") +
+          card("Admins & managers", rowlist([
+            rowitem({ avatar: admin, title: `${admin} <span class="badge acc">admin</span>`, sub: "owner@" + dom + ".la · from registration", side: badge("active") }),
+            openSeat,
+            openSeat
+          ]), { icon: "key", badge: `<span class="badge plain">1 of 3 used</span>` }) +
+          `<div style="height:16px"></div>` +
+          card("Roles", rowlist([
+            rowitem({ icon: "shield", title: "Admin", sub: "Full console — system · accounting · users · capacity", neutral: true, side: `<span class="badge acc">full</span>` }),
+            rowitem({ icon: "userCheck", title: "Manager", sub: "Staff Manager subset — approvals · scheduling · attendance · no money", neutral: true, side: badge("plain") })
+          ]), { icon: "users" })
       };
     },
     approvals() {
-      const tid = T().id, items = APPROVALS.inbox(tid);
-      const inbox = items.length ? rowlist(items.map(i => rowitem({
-        icon: i.grade === "flag" ? "alert" : "check",
-        title: `${i.who} <span class="badge ${i.grade === "flag" ? "warn" : "plain"}">${APPROVALS.TYPES[i.type] ? APPROVALS.TYPES[i.type].label : i.type}${i.grade === "flag" ? " · flag" : ""}</span>`,
-        sub: `${i.detail} · ${i.id}`,
-        side: `<button class="btn xs soft" data-act="approve:${i.id}:approved">Approve</button> <button class="btn xs ghost" data-act="approve:${i.id}:rejected">Reject</button>`
-      }))) : empty("check", "Inbox clear", "No pending approvals");
+      const tid = T().id, items = APPROVALS.inbox(tid), V = APPROVALS.view;
+      const teamLabel = (k) => { const t = DATA.TEAMS.find(x => x.id === k); return t ? t.label : k; };
+      // ---- priority summary (on shift → overtime → leave → others) ----
+      const byCat = {}; APPROVALS.CAT_ORDER.forEach(c => byCat[c] = 0);
+      items.forEach(i => byCat[APPROVALS.catOf(i.type)]++);
+      const summary = `<div class="appr-summary">${APPROVALS.CAT_ORDER.map((c, n) => `<div class="appr-cat${byCat[c] ? " has" : ""}"><span class="ac-rank">${n + 1}</span><span class="ac-n num">${byCat[c]}</span><span class="ac-l">${APPROVALS.CAT_LABEL[c]}</span></div>`).join("")}</div>`;
+      // ---- two-level tabs, grouping remembered (by team → type, or by type → team) ----
+      const mode = V.mode, cats = APPROVALS.CAT_ORDER, teamIds = DATA.teamsFor(tid).map(t => t.id);
+      const topKeys = ["__all"].concat(mode === "team" ? teamIds : cats);   // "All messages" is always the leftmost tab
+      const topLbl = (k) => k === "__all" ? "All messages" : (mode === "team" ? teamLabel(k) : APPROVALS.CAT_LABEL[k]);
+      let tab = V.tab; if (topKeys.indexOf(tab) < 0) tab = "__all"; // default to All — never lands on an empty tab
+      const inTop = tab === "__all" ? items.slice() : items.filter(i => mode === "team" ? apprTeam(i) === tab : APPROVALS.catOf(i.type) === tab);
+      const subAll = mode === "team" ? cats : teamIds;
+      const subPresent = subAll.filter(s => inTop.some(i => mode === "team" ? APPROVALS.catOf(i.type) === s : apprTeam(i) === s));
+      const subKeys = ["__all"].concat(subPresent);
+      let sub = V.sub; if (subKeys.indexOf(sub) < 0) sub = "__all";
+      const subLbl = (s) => s === "__all" ? "All" : (mode === "team" ? APPROVALS.CAT_LABEL[s] : teamLabel(s));
+      const shown = inTop.filter(i => sub === "__all" ? true : (mode === "team" ? APPROVALS.catOf(i.type) === sub : apprTeam(i) === sub));
+      const topCount = (k) => k === "__all" ? items.length : items.filter(i => mode === "team" ? apprTeam(i) === k : APPROVALS.catOf(i.type) === k).length;
+      const tabsRow = `<div class="appr-tabs">${topKeys.map(k => `<button class="appr-tab${k === "__all" ? " all" : ""}${k === tab ? " on" : ""}" data-act="appr:tab:${k}">${topLbl(k)}<span class="appr-tc">${topCount(k)}</span></button>`).join("")}</div>`;
+      const subRow = `<div class="appr-subtabs">${subKeys.map(s => `<button class="appr-subtab${s === sub ? " on" : ""}" data-act="appr:sub:${s}">${subLbl(s)}</button>`).join("")}</div>`;
+      const list = shown.length ? rowlist(shown.map(i => {
+        const p = apprPerson(i);
+        return rowitem({
+          icon: i.grade === "flag" ? "alert" : "check",
+          title: `${i.who} <span class="badge ${i.grade === "flag" ? "warn" : "plain"}">${APPROVALS.TYPES[i.type] ? APPROVALS.TYPES[i.type].label : i.type}${i.grade === "flag" ? " · flag" : ""}</span>`,
+          sub: `${i.detail} · ${APPROVALS.CAT_LABEL[APPROVALS.catOf(i.type)]}${p ? " · " + p.team : ""} · ${i.id}`,
+          side: `<button class="btn xs soft" data-act="approve:${i.id}:approved">Approve</button> <button class="btn xs ghost" data-act="approve:${i.id}:rejected">Reject</button>`
+        });
+      })) : empty("check", "Nothing in this tab", "Pick another tab or group");
       return {
-        title: "Approvals", sub: "one inbox · request → checks → decision → audit · flag-not-block",
-        actions: `<button class="btn ghost sm" data-act="approve:register">${icon("plus")} Register new type</button>`,
-        body: band("check", "Staff Manager · Approvals", "Every §A flow runs on one engine. A worker-protecting check (geofence · OT · punch) flags and routes here — it never blocks the worker.") +
-          `<div class="statline">
-            <div class="sl-it"><span class="sl-v num">${items.length}</span><span class="sl-l">pending</span></div>
-            <div class="sl-it"><span class="sl-v num">${items.filter(i => i.grade === "flag").length}</span><span class="sl-l">flagged (not blocked)</span></div>
-            <div class="sl-it"><span class="sl-v num">${Object.keys(APPROVALS.TYPES).length}</span><span class="sl-l">approvable types</span></div>
-          </div>` +
-          card("Inbox", inbox, { icon: "inbox", badge: `<span class="badge warn">${items.length} pending</span>` }) +
+        title: "Approvals", sub: "Prioritised inbox · group by team or type · decisions audited",
+        body: band("check", "Staff Manager · Approvals", "Worker-protecting checks (geofence · OT · punch) flag and route here — they never block the worker. Summary is prioritised: on shift → overtime → leave → others.") +
+          card("Summary · by priority", summary, { icon: "gauge", badge: `<span class="badge warn">${items.length} pending</span>` }) +
           `<div style="height:16px"></div>` +
-          card("One primitive, every flow", table([{ h: "Type" }, { h: "Approver" }, { h: "Check" }, { h: "Worker-protecting" }], Object.keys(APPROVALS.TYPES).map(k => {
-            const ty = APPROVALS.TYPES[k];
-            return { cells: [ty.label, `<span class="badge ${ty.scope === "owner" ? "acc" : "plain"}">${ty.scope}</span>`, `<span class="small muted">${ty.check}</span>`, ty.protective ? `<span class="badge ok">flag, never block</span>` : `<span class="badge plain">standard</span>`] };
-          })), { icon: "shield" })
+          card("Inbox", `<div class="appr-toolbar">
+              <div class="seg sm" role="group" aria-label="Group approvals by">
+                <button aria-pressed="${mode === "team"}" data-act="appr:mode:team">By team</button>
+                <button aria-pressed="${mode === "type"}" data-act="appr:mode:type">By type</button>
+              </div>
+              <button class="btn xs ghost" data-act="appr:save">${icon("check")} ${V.saved ? "View saved ✓" : "Save view"}</button>
+            </div>
+            ${tabsRow}${subRow}
+            <div class="appr-list">${list}</div>`, { icon: "inbox", badge: `<span class="badge warn">${items.length} pending</span>` })
       };
     },
 
@@ -178,7 +324,7 @@ window.SCR_OWNER = (function () {
         : `<button class="btn ghost sm" data-act="pay-run:adjust">${icon("refresh")} Open adjustment run</button>`;
       return {
         title: "Pay runs", sub: "draft → review → approve → pay → file → close · one-tap", actions,
-        body: band("banknote", "Payroll · the bridge between Staff and Books", "Lao-correct: NSSF 6%+5.5% (cap ₭4.5M), PIT 0–25%. Closed runs are immutable — fixes via an adjustment run.") +
+        body: band("banknote", "Payroll · the bridge between Staff and Accounting", "Lao-correct: NSSF 6%+5.5% (cap ₭4.5M), PIT 0–25%. Closed runs are immutable — fixes via an adjustment run.") +
           card(`${run.id} · ${run.period} · ${run.totals.headcount} staff`,
             UI.steps(steps, idx) +
             `<div class="statline" style="margin-top:16px">
@@ -189,7 +335,7 @@ window.SCR_OWNER = (function () {
               <div class="sl-it"><span class="sl-v">${lvlpill(run.level, true)}</span><span class="sl-l">Level</span></div>
             </div>` +
             (run.state === "close"
-              ? `<div class="seal-note ok" style="margin-top:12px">${icon("check")} Closed & immutable — staff cost posted to Books → Cashbook. Corrections go through an adjustment run.</div>`
+              ? `<div class="seal-note ok" style="margin-top:12px">${icon("check")} Closed & immutable — staff cost posted to Accounting → Cashbook. Corrections go through an adjustment run.</div>`
               : `<div class="seal-note brand" style="margin-top:12px">${icon("history")} State: <b>${run.state}</b>. Advancing never edits silently; closing posts to Accounting and locks the run.</div>`),
             { icon: "banknote", badge: run.state === "close" ? `<span class="badge ok">closed</span>` : `<span class="badge warn">${run.state}</span>` }) +
           `<div style="height:16px"></div>` +
@@ -481,6 +627,34 @@ window.SCR_OWNER = (function () {
           </div>`, { icon: "briefcase" })
       };
     },
+    staffdash() {
+      const tid = T().id, items = STAFFDASH.layout(tid), M = STAFFDASH.META, COLS = STAFFDASH.COLS;
+      const gridRows = Math.max(STAFFDASH.rows(tid), 2);
+      const occupied = items.reduce((n, w) => n + w.w * w.h, 0);
+      const empties = Math.max(0, gridRows * COLS - occupied);
+      const slots = Array.from({ length: empties }, () => `<div class="dbx-slot"></div>`).join("");
+      const widget = (w) => {
+        const m = M[w.id];
+        const head = `<div class="dbx-w-head"><span class="dbx-w-ic">${icon(m.icon)}</span><span class="dbx-w-t">${m.label}</span>${m.fixed ? `<span class="badge acc">${icon("lock")} pinned</span>` : `<button class="dbx-x" data-act="staffdash:remove:${w.id}" aria-label="Remove">${icon("x")}</button>`}</div>`;
+        const tools = m.fixed ? "" : `<div class="dbx-tools">
+            <div class="dbx-pad"><button data-act="staffdash:move:${w.id}:0:-1" aria-label="Up">${icon("chevD", "flip")}</button><button data-act="staffdash:move:${w.id}:-1:0" aria-label="Left">${icon("chevL")}</button><button data-act="staffdash:move:${w.id}:1:0" aria-label="Right">${icon("chevR")}</button><button data-act="staffdash:move:${w.id}:0:1" aria-label="Down">${icon("chevD")}</button></div>
+            <div class="dbx-szbtns"><button data-act="staffdash:resize:${w.id}:-1:0" title="Narrower">W−</button><button data-act="staffdash:resize:${w.id}:1:0" title="Wider">W+</button><button data-act="staffdash:resize:${w.id}:0:-1" title="Shorter">H−</button><button data-act="staffdash:resize:${w.id}:0:1" title="Taller">H+</button></div>
+          </div>`;
+        return `<div class="dbx-widget${m.fixed ? " fixed" : ""}" data-wid="${w.id}"${m.fixed ? "" : ` data-drag="${w.id}"`} style="grid-column:${w.x + 1}/span ${w.w};grid-row:${w.y + 1}/span ${w.h}">
+          ${head}<div class="dbx-w-meta">${m.cat} · ${w.w}×${w.h}${m.fixed ? "" : " · drag to move"}</div>${tools}
+          ${m.fixed ? "" : `<span class="dbx-resize" data-resize="${w.id}" title="Drag to resize">${icon("chevR", "diag")}</span>`}
+        </div>`;
+      };
+      const canvas = `<div class="dbx-grid" style="--cols:${COLS}" data-dbx="1">${slots}${items.map(widget).join("")}</div>`;
+      const catalog = STAFFDASH.catalogOpen() ? `<div style="height:16px"></div>` + card("Add a widget", `<p class="small muted" style="margin-bottom:10px">Grouped by data source. Click to drop it onto the first free spot.</p><div class="dbx-cat">${(STAFFDASH.available(tid).map(c => `<div class="dbx-cat-group"><div class="dbx-cat-name">${icon(c.icon)} ${c.cat}</div>${c.items.map(it => `<button class="dbx-cat-item" data-act="staffdash:add:${it.id}"><span class="dci-ic">${icon(it.icon)}</span><span class="dci-main"><span class="dci-t">${it.label}</span><span class="dci-d">${it.desc} · ${it.w}×${it.h}</span></span><span class="dci-add">${icon("plus")}</span></button>`).join("")}</div>`).join("")) || `<div class="se-empty small muted">Every widget is already on the dashboard.</div>`}</div>`, { icon: "grid", badge: `<button class="btn xs ghost" data-act="staffdash:catalog:close">${icon("x")} Close</button>` }) : "";
+      return {
+        title: "Staff dashboard", sub: "Compose what staff see on Home — add · resize · position widgets (SFDC-style)",
+        actions: `<button class="btn sm" data-act="staffdash:catalog:${STAFFDASH.catalogOpen() ? "close" : "open"}">${icon("plus")} Add widget</button><button class="btn ghost sm" data-act="staffdash:reset">${icon("refresh")} Reset</button><button class="btn ghost sm" data-go="staff/web/today">${icon("eye")} Preview as staff</button>`,
+        body: band("grid", "System · Staff dashboard builder", "Pick information frames from the catalog (grouped by data source), then drag to reposition and drag the corner to resize on the grid — Salesforce-style. Announcements stays pinned at the top.") +
+          card("Dashboard canvas", `<p class="small muted" style="margin-bottom:12px">${items.length} widget${items.length === 1 ? "" : "s"} · ${COLS} columns. Drag a widget to move it, drag its corner to resize — or use the on-card buttons.</p>${canvas}`, { icon: "grid", badge: `<span class="badge plain">${items.length} placed</span>` }) +
+          catalog
+      };
+    },
     functions() {
       const tid = T().id;
       const sw = (fe) => `<button class="switch" aria-checked="${FLAGS.on(tid, fe)}" role="switch" data-act="flags:toggle:${fe}" aria-label="${FLAGS.REGISTRY[fe].label}"></button>`;
@@ -572,7 +746,7 @@ window.SCR_OWNER = (function () {
       const t = T();
       return {
         title: "Message quotas", sub: "LINE · WhatsApp — used / left · top-up",
-        body: band("chat", "Capacity · Message quotas", "Metered channels carry a real provider cost — each send debits the quota and posts a fee to Books.") +
+        body: band("chat", "Capacity · Message quotas", "Metered channels carry a real provider cost — each send debits the quota and posts a fee to Accounting.") +
           card("This cycle", `<div class="capstrip">
             ${segMeter("LINE", t.quota.line.used, t.quota.line.limit)}
             ${segMeter("WhatsApp", t.quota.whatsapp.used, t.quota.whatsapp.limit)}
@@ -618,7 +792,7 @@ window.SCR_OWNER = (function () {
     },
     staff() { return { title: "Staff", body: `${card("Needs you", rowlist([rowitem({ icon: "calCheck", title: "2 leave requests", side: `<button class="btn xs soft">Review</button>` }), rowitem({ icon: "pin", title: "2 geofence flags", side: `<button class="btn xs soft">Open</button>` })]))}` }; },
     pay() { const run = PAYROLL.getRun(T().id); return { title: "Pay", body: `${kpi(run.id, kip(run.totals.cost), run.state + " · net " + kip(run.totals.net))}${card("One-tap", `<p class="small muted" style="margin-bottom:10px">Preview totals → approve → pay → file.</p><button class="btn" style="width:100%;justify-content:center" data-act="pay-run:oneclick">${icon("banknote")} Run payroll</button>`)}` }; },
-    books() { const t = T(), day = LEDGER.sums(LEDGER.ranged(t.id, "day")); return { title: "Books", body: `${kpi("Net · day", (day.net >= 0 ? "+" : "") + kip(day.net), day.count + " entries")}<button class="btn" style="width:100%;justify-content:center" data-go="owner/web/cashbook">${icon("plus")} Add cash / expense</button>${card("This month", `${segMeter("Margin", Math.round(LEDGER.rollup(t.id).margin * 100), 100, { unit: "%" })}`)}` }; },
+    books() { const t = T(), day = LEDGER.sums(LEDGER.ranged(t.id, "day")); return { title: "Accounting", body: `${kpi("Net · day", (day.net >= 0 ? "+" : "") + kip(day.net), day.count + " entries")}<button class="btn" style="width:100%;justify-content:center" data-go="owner/web/cashbook">${icon("plus")} Add cash / expense</button>${card("This month", `${segMeter("Margin", Math.round(LEDGER.rollup(t.id).margin * 100), 100, { unit: "%" })}`)}` }; },
     more() { return { title: "More", body: card("", rowlist([rowitem({ icon: "percent", title: "Tax centre", go: "owner/web/tax" }), rowitem({ icon: "settings", title: "System (open on web)", neutral: true }), rowitem({ icon: "gauge", title: "Capacity", go: "owner/web/plan" })])) }; }
   };
 

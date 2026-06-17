@@ -8,6 +8,113 @@ window.SCR_STAFF = (function () {
   const me = () => DATA.me();
   const slip = DATA.PAYSLIP;
 
+  /* ---- Time Off (SF-style) helpers ---- */
+  function balRow(label, left, total, unit) {
+    const pct = Math.max(0, Math.min(100, Math.round(left / total * 100)));
+    return `<div class="to-balrow"><div class="to-bl"><span>${label}</span><span class="to-bv"><b>${left}</b> / ${total} ${unit || "days"} left</span></div><div class="to-meter"><i style="width:${pct}%"></i></div></div>`;
+  }
+  function balancesCard() {
+    return card("Balances", `<div class="to-bal">${balRow("Annual leave", 8, 15)}${balRow("Sick leave · paid", 29, 30)}</div><p class="small muted" style="margin-top:6px">Resets each calendar year.</p>`, { icon: "calCheck" });
+  }
+  function holidaysCard() {
+    const hol = CAL.upcoming(5);
+    return card("Public holidays", rowlist(hol.map(h => rowitem({ icon: "calendar", title: h.name, sub: CAL.fmtShort(h.date) + " · 2026", neutral: true, side: badge(h.scope === "public" ? "plain" : "ok") }))), { icon: "calendar", badge: `<span class="pending-chip">${icon("lock")} set by your shop</span>` });
+  }
+  // Create absence — a clear frame POP-UP (was an easy-to-miss panel at the bottom)
+  function createAbsenceModal(sel, sum) {
+    const has = sel.length > 0;
+    const opts = `<option value="">Please select…</option>` + CAL.LEAVE_TYPES.map(t => `<option value="${t.id}"${CAL.state.type === t.id ? " selected" : ""}>${t.label}</option>`).join("");
+    const ro = (v) => `<div class="to-ro">${v}</div>`;
+    const form = `<div class="leave-form">
+      <div class="field"><label>Time type *</label><select class="input" data-leavetype>${opts}</select></div>
+      <div class="field"><label>Absence duration</label><select class="input" data-leavedur><option>Full day</option><option>Half day · morning</option><option>Half day · afternoon</option></select></div>
+      <div class="to-2col">
+        <div class="field"><label>Start date</label>${ro(has ? CAL.fmtShort(sum.from) + " 2026" : "—")}</div>
+        <div class="field"><label>End date</label>${ro(has ? CAL.fmtShort(sum.to) + " 2026" : "—")}</div>
+      </div>
+      <div class="to-2col">
+        <div class="field"><label>Requesting</label>${ro(has ? sum.days + " day" + (sum.days > 1 ? "s" : "") : "—")}</div>
+        <div class="field"><label>Returning to work</label>${ro(has ? CAL.fmtShort(sum.returning) + " 2026" : "—")}</div>
+      </div>
+      <div class="leave-sel-sum">${has ? sel.map(d => `<span class="leave-pill">${CAL.fmtShort(d)}</span>`).join("") : `<span class="small muted">No days picked — close this, tap day(s) on the calendar, then reopen.</span>`}${has ? `<button class="btn xs ghost" data-act="leave:clear">${icon("x")} Clear</button>` : ""}</div>
+      <div class="field"><label>Comment <span class="small muted">· your manager will see this</span></label><textarea class="input" data-leavenote rows="2" placeholder="Reason or handover note"></textarea></div>
+    </div>`;
+    return `<div class="dp-backdrop" data-act="leave:close"></div>
+      <div class="dp-modal" role="dialog" aria-modal="true" aria-label="Create absence">
+        <div class="dp-head"><div class="dp-date"><span class="dp-dow">${icon("calCheck")} Create absence</span><span class="dp-full">Request time off — your manager approves</span></div><button class="iconbtn dp-x" data-act="leave:close" aria-label="Close">${icon("x")}</button></div>
+        <div class="dp-body">${form}</div>
+        <div class="dp-foot"><span class="small muted">${has ? sum.days + " day" + (sum.days > 1 ? "s" : "") + " selected" : "Pick days on the calendar"}</span><div style="display:flex;gap:8px"><button class="btn ghost sm" data-act="leave:close">Cancel</button><button class="btn sm" data-act="leave:submit"${has ? "" : " disabled"}>${icon("send")} Submit</button></div></div>
+      </div>`;
+  }
+
+  /* ---- shared comms helpers (Home banner · Notices · Inbox read the same feed) ---- */
+  function shortWhen(w) { if (!w) return ""; const parts = w.split(" "), d = parts[0].split("-"); return parseInt(d[2], 10) + " " + CAL.MON3[parseInt(d[1], 10) - 1] + (parts[1] ? " " + parts[1] : ""); }
+  function announceBanner() {
+    const items = ANNOUNCE.active(DATA.state.tenantId);
+    if (!items.length) return "";
+    return `<div class="ann-banner" style="margin-bottom:16px">
+      <div class="ann-h">${icon("megaphone")}<b>Company announcements</b><span class="ann-cnt">${items.length}</span><button class="ann-more" data-go="staff/web/inbox">All in Inbox ${icon("chevR")}</button></div>
+      ${items.map(a => `<div class="ann-item${a.tone === "acc" ? " acc" : ""}">
+        <div class="ann-main"><div class="ann-t">${UI.esc(a.title)}</div>${a.body ? `<div class="ann-b">${UI.esc(a.body)}</div>` : ""}</div>
+        <span class="ann-meta">${UI.esc(ANNOUNCE.statusLabel(a))}</span>
+      </div>`).join("")}
+    </div>`;
+  }
+  function feedRows(n, toInbox) {
+    const f = ANNOUNCE.feed(DATA.state.tenantId), list = n ? f.slice(0, n) : f;
+    return rowlist(list.map(m => rowitem({
+      icon: m.icon, title: m.title,
+      sub: [m.sub, m.channel, shortWhen(m.when)].filter(Boolean).join(" · "),
+      go: toInbox ? "staff/web/inbox" : (m.go || "staff/web/inbox"),
+      side: m.tone === "ok" ? badge("ok") : (m.kind ? `<span class="badge plain">${m.kind === "period" ? "pinned" : "new"}</span>` : "")
+    })));
+  }
+
+  // shared inner form (web modal + mobile sub-screen reuse the same fields + data-act hooks)
+  function fixFormInner(uid) {
+    const recs = CAL.fixableRecords(uid), pick = CAL.state.fixDate;
+    const rows = recs.length ? recs.map(r => `<label class="fix-row${pick === r.date ? " on" : ""}">
+        <input type="radio" name="fixday" ${pick === r.date ? "checked" : ""} data-act="att:fix-pick:${r.date}">
+        <span class="fix-d">${r.dow} ${r.dd} ${r.mon}</span>
+        ${r.st === "late" ? badge("late") : `<span class="badge bad">absent</span>`}
+        <span class="fix-lbl small muted">${UI.esc(r.label)}</span>
+      </label>`).join("") : `<div class="se-empty small muted">No late or absent days in the last 3 months — nothing to correct ✓</div>`;
+    return `<p class="small muted" style="margin:2px 0 10px">Only late / absent days can be corrected. Pick the day, attach evidence, and explain.</p>
+      <div class="fix-list">${rows}</div>
+      <div class="field" style="margin-top:12px"><label>Evidence</label><button class="btn sm ghost" data-act="att:fix-evidence">${icon(CAL.state.fixEvidence ? "check" : "upload")} ${CAL.state.fixEvidence ? "Evidence attached ✓ · tap to remove" : "Attach evidence (photo / doc)"}</button></div>
+      <div class="field"><label>Explanation <span class="small muted">· required · your manager will see this</span></label><textarea class="input" data-fixnote rows="2" placeholder="What happened on this day?">${UI.esc(CAL.state.fixNote || "")}</textarea></div>`;
+  }
+  // Request-a-fix POP-UP (web): the shared form, wrapped in the centered modal
+  function fixModal(uid) {
+    if (!CAL.state.fixOpen) return "";
+    const pick = CAL.state.fixDate, has = !!pick;
+    return `<div class="dp-backdrop" data-act="att:fix-close"></div>
+      <div class="dp-modal" role="dialog" aria-modal="true" aria-label="Request an attendance fix">
+        <div class="dp-head"><div class="dp-date"><span class="dp-dow">${icon("edit")} Request a fix</span><span class="dp-full">Correct one attendance record — your manager approves</span></div><button class="iconbtn dp-x" data-act="att:fix-close" aria-label="Close">${icon("x")}</button></div>
+        <div class="dp-body">${fixFormInner(uid)}</div>
+        <div class="dp-foot"><span class="small muted">${has ? "Correcting " + CAL.fmtShort(pick) : "Select a day above"}</span><div style="display:flex;gap:8px"><button class="btn ghost sm" data-act="att:fix-close">Cancel</button><button class="btn sm" data-act="att:fix-submit"${has ? "" : " disabled"}>${icon("send")} Send request</button></div></div>
+      </div>`;
+  }
+
+  // Payslip "Top 3" frame: current month expected (Gross : OT : Expenses : others) + the previous 2 months
+  function payTop3() {
+    const cur = { ot: 300000, exp: 150000, other: 100000 };
+    const expected = slip.net + cur.ot + cur.exp + cur.other;
+    const li = (l, v) => `<div class="pt-li"><span>${l}</span><span class="num">${kip(v)}</span></div>`;
+    const prev = [
+      { mon: "May 2026", net: 5492250, when: "paid 25 May ✓" },
+      { mon: "April 2026", net: 5410000, when: "paid 25 Apr ✓" }
+    ];
+    return `<div class="grid cols-3 pay-top3" style="margin-bottom:16px">
+      ${card("This month · expected", `
+        <div class="pt-hero"><span class="pt-lbl">Expected take-home</span><span class="pt-val num">${kip(expected)}</span><span class="pt-sub"><span class="badge ok">25 Jun</span> · estimate</span></div>
+        <div class="pt-lines">${li("Gross", slip.gross)}${li("OT", cur.ot)}${li("Expenses / reimburse", cur.exp)}${li("Other allowances", cur.other)}</div>`, { icon: "wallet", cls: "pt-cur" })}
+      ${prev.map(p => card(p.mon, `
+        <div class="pt-hero"><span class="pt-lbl">Net paid</span><span class="pt-val num">${kip(p.net)}</span><span class="pt-sub">${p.when}</span></div>
+        <button class="btn xs ghost" data-act="toast:${p.mon} payslip — opens the full breakdown (demo)">${icon("receipt")} View payslip</button>`, { icon: "history" })).join("")}
+    </div>`;
+  }
+
   /* ---------------- web ---------------- */
   const web = {
     today() {
@@ -15,54 +122,73 @@ window.SCR_STAFF = (function () {
       const swBadge = sw ? (sw.state === "pending" ? `<span class="badge warn">pending</span>` : badge(sw.state === "approved" ? "approved" : "plain")) : `<span class="badge warn">pending</span>`;
       const adv = (window.PAYROLL && PAYROLL.getAdvances("phoungern").find(a => a.uid === (me() && me().id))) || null;
       const pub = window.WORK && WORK.isPublished("phoungern");
-      return {
-        title: "Good morning, Khamla", sub: "Tuesday · 15 June 2026 · Phoungern Co.",
-        body: `
-        <div class="grid cols-3" style="margin-bottom:16px">
-          ${kpi("This week", "32.5<small> h</small>", `<span class="up">on track</span> · 6 shifts`)}
-          ${kpi("Leave balance", "8.0<small> days</small>", "annual · 1.5 used")}
-          ${kpi("Next shift", "Wed 09:00", "Floor · this week")}
-        </div>
-        <div class="grid cols-2" style="margin-bottom:16px">
-          ${card("Clock", `
+      const att = CAL.attSummary(DATA.me().id);
+      // widget renderers — keyed by catalog id; the manager picks · places · sizes them (STAFFDASH)
+      const W = {
+        announcement: () => announceBanner() || card("Announcements & alerts", empty("megaphone", "No announcements", "Your shop will post here"), { icon: "megaphone" }),
+        hours: () => kpi("This week", "32.5<small> h</small>", `<span class="up">on track</span> · 6 shifts`),
+        leavebal: () => kpi("Leave balance", "8.0<small> days</small>", "annual · 1.5 used"),
+        nextshift: () => kpi("Next shift", "Wed 09:00", "Floor · this week"),
+        attendance: () => card("Attendance", `<div class="statline"><div class="sl-it"><span class="sl-v num">${att.present}</span><span class="sl-l">present</span></div><div class="sl-it"><span class="sl-v num">${att.late}</span><span class="sl-l">late</span></div><div class="sl-it"><span class="sl-v num">${att.onTime}%</span><span class="sl-l">on-time</span></div></div>`, { icon: "history", link: "staff/web/attendance", linkLabel: "Open" }),
+        nextpay: () => kpi("Next pay", kip(slip.net), `<span class="badge ok">25 Jun</span> · ready`, { hero: true }),
+        payslip: () => card("June payslip", `<div class="tablewrap"><table class="tbl"><tbody><tr><td>Gross</td><td class="r num">${kip(slip.gross)}</td></tr><tr><td>− NSSF</td><td class="r num neg">−247,500</td></tr><tr><td>− PIT</td><td class="r num neg">−260,250</td></tr><tr class="total"><td>Net</td><td class="r num">${kip(slip.net)}</td></tr></tbody></table></div>`, { icon: "receipt", link: "staff/web/pay", linkLabel: "My pay" }),
+        clock: () => card("Clock in/out", `
             <div class="clock-hero">
               <div class="ch-line">
                 <div><div class="ch-time num">— : —</div><div class="ch-sub">You're clocked out · last out 18:02 ✓ synced</div></div>
                 <button class="ch-btn" data-go="staff/web/clock">${icon("clock")} Clock in</button>
               </div>
               <div class="geo">${icon("pin")} Main shop · within 30 m geofence</div>
-            </div>`, { icon: "clock" })}
-          ${card("Notices", rowlist([
-          rowitem({ icon: "banknote", title: "June payslip is ready", sub: "Tap to see the breakdown", side: badge("ok") }),
-          rowitem({ icon: "calendar", title: "Shift reminder · tomorrow 09:00", sub: "via LINE", neutral: true }),
-          rowitem({ icon: "megaphone", title: "Owner: Songkran roster posted", sub: "2 days ago", neutral: true })
-        ]), { icon: "inbox", link: "staff/web/inbox", linkLabel: "Inbox" })}
-        </div>
-        <div class="grid cols-2">
-          ${card("Shift line-up", `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">${pub ? badge("published") : `<span class="badge warn">draft</span>`}<span class="small muted">${pub ? "Roster is live — your week below" : "Owner hasn't published the week yet"}</span></div>` + rowlist([
+            </div>`, { icon: "clock" }),
+        notices: () => card("Notices", feedRows(3, true), { icon: "inbox", link: "staff/web/inbox", linkLabel: "Open Inbox" }),
+        shiftline: () => card("Shift line-up", `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">${pub ? badge("published") : `<span class="badge warn">draft</span>`}<span class="small muted">${pub ? "Roster is live — your week below" : "Owner hasn't published the week yet"}</span></div>` + rowlist([
           rowitem({ icon: "calendar", title: "Mon · 09:00–18:00", sub: "Floor", side: badge("published") }),
           rowitem({ icon: "calendar", title: "Wed · 09:00–18:00", sub: "Floor · 1 open shift", side: `<button class="btn xs soft">Claim</button>` }),
           rowitem({ icon: "swap", title: "Thu 18 · swap → Souphaphone", sub: "your request", side: swBadge })
-        ]), { icon: "calendar", link: "staff/web/schedule", linkLabel: "Schedule" })}
-          ${card("Approval status", rowlist([
+        ]), { icon: "calendar", link: "staff/web/schedule", linkLabel: "Schedule" }),
+        openshifts: () => card("Open shifts", rowlist([
+          rowitem({ icon: "calendar", title: "Wed · 09:00–18:00", sub: "Floor", side: `<button class="btn xs soft">Claim</button>` }),
+          rowitem({ icon: "calendar", title: "Sat · 10:00–20:00", sub: "Floor", side: `<button class="btn xs soft">Claim</button>` })
+        ]), { icon: "swap" }),
+        approvals: () => card("Approval status", rowlist([
           rowitem({ icon: "calCheck", title: "Leave · Annual 3 days", sub: "22–24 Jun", side: badge("approved") }),
           rowitem({ icon: "swap", title: "Shift swap · Thu 18", sub: "→ Souphaphone", side: swBadge }),
           adv ? rowitem({ icon: "wallet", title: "Advance · " + kip(adv.amount), sub: "earned-wage access", side: adv.status === "requested" ? `<span class="badge warn">pending</span>` : badge(adv.status === "paid" ? "ok" : adv.status === "approved" ? "approved" : "plain") })
             : rowitem({ icon: "wallet", title: "No advance requested", sub: "request from My pay", neutral: true, side: badge("plain") })
-        ]), { icon: "check" })}
-        </div>`
+        ]), { icon: "check" }),
+        hourstrend: () => card("Hours trend", UI.bars([28, 31, 30, 33, 31.5, 32.5].map((v, i) => ({ l: "W" + (i + 1), v })), { values: true, h: 120 }) + `<p class="small muted" style="margin-top:6px">Worked hours · last 6 weeks</p>`, { icon: "trend" }),
+        holidays: () => card("Upcoming holidays", rowlist(CAL.upcoming(3).map(h => rowitem({ icon: "calendar", title: h.name, sub: CAL.fmtShort(h.date) + " · 2026", neutral: true, side: badge(h.scope === "public" ? "plain" : "ok") }))), { icon: "calendar" }),
+        onshift: () => { const ds = CAL.daySummary("phoungern", CAL.TODAY); const names = ds.onShift.slice(0, 5).map(e => e.p.name.split(" ")[0]).join(" · "); return card("On shift today", `<div class="statline"><div class="sl-it"><span class="sl-v num">${ds.onShift.length}</span><span class="sl-l">working</span></div><div class="sl-it"><span class="sl-v num">${ds.callable.length}</span><span class="sl-l">callable</span></div></div><p class="small muted" style="margin-top:8px">${names || "—"}</p>`, { icon: "users", link: "staff/web/schedule", linkLabel: "Roster" }); },
+        birthdays: () => card("Birthdays this month", rowlist([
+          rowitem({ icon: "heart", title: "Souphaphone Keo", sub: "12 June", neutral: true, side: `<span class="badge ok">soon</span>` }),
+          rowitem({ icon: "heart", title: "Noy Phaketh", sub: "24 June", neutral: true })
+        ]), { icon: "heart" }),
+        quicklinks: () => card("Quick actions", `<div class="ql-grid">
+          <button class="ql-btn" data-go="staff/web/clock">${icon("clock")}<span>Clock in</span></button>
+          <button class="ql-btn" data-go="staff/web/leave">${icon("calCheck")}<span>Request leave</span></button>
+          <button class="ql-btn" data-go="staff/web/pay">${icon("receipt")}<span>Payslip</span></button>
+          <button class="ql-btn" data-go="staff/web/schedule">${icon("calendar")}<span>My schedule</span></button>
+        </div>`, { icon: "sparkle" })
+      };
+      const grid = STAFFDASH.layout("phoungern").map(w => {
+        const inner = W[w.id] ? W[w.id]() : "";
+        return inner ? `<div class="dash-w" style="grid-column:${w.x + 1}/span ${w.w};grid-row:${w.y + 1}/span ${w.h}">${inner}</div>` : "";
+      }).join("");
+      return {
+        title: "Good morning, Tinar", sub: "Tuesday · 15 June 2026 · Phoungern Co.",
+        body: `<div class="dash-grid" style="--cols:${STAFFDASH.COLS}">${grid}</div>`
       };
     },
     clock() {
       return {
-        title: "Clock in / out", sub: "Selfie + GPS + timestamp · never blocks, even offline",
+        title: "Clock in/out", sub: "Selfie + GPS + timestamp · never blocks, even offline",
         body: `
         <div class="grid cols-2">
           ${card("Punch", `
             <div class="clock-hero">
               <div class="ch-line">
                 <div><div class="ch-time num">08:58</div><div class="ch-sub">Tuesday 15 June</div></div>
-                <button class="ch-btn">${icon("camera")} Selfie & clock in</button>
+                <button class="ch-btn" data-act="staff:punch">${icon("camera")} Selfie & clock in</button>
               </div>
               <div class="geo">${icon("pin")} GPS locked · 12 m from pin · evidence-grade ✓</div>
             </div>
@@ -79,52 +205,67 @@ window.SCR_STAFF = (function () {
       };
     },
     attendance() {
+      const uid = DATA.me().id, sum = CAL.attSummary(uid), recs = CAL.attRecords(uid, 14);
+      const m = new Date(CAL.TODAY).getMonth();
+      const grade = (st) => st === "present" ? `<span class="badge ok">present</span>` : st === "late" ? badge("late") : st === "absent" ? `<span class="badge bad">absent</span>` : st === "leave" ? `<span class="badge plain">leave</span>` : badge("plain");
       return {
-        title: "My attendance", sub: "June 2026 · history, grade & fix-requests",
-        actions: `<button class="btn ghost sm">${icon("edit")} Request a fix</button>`,
+        title: "My attendance", sub: "Last 3 months · history, grade & fix-requests",
+        actions: `<button class="btn sm" data-act="att:fix-open">${icon("edit")} Request a fix</button>`,
         body: `
         <div class="grid cols-3" style="margin-bottom:16px">
-          ${kpi("Present", "11<small> days</small>", "this month")}
-          ${kpi("Late", "1<small> day</small>", "<span class='down'>geofence flag</span>")}
-          ${kpi("On-time rate", "92%", "<span class='up'>+4 vs May</span>")}
+          ${kpi("Present", sum.present + "<small> days</small>", "this month")}
+          ${kpi("Late", sum.late + "<small> day" + (sum.late !== 1 ? "s" : "") + "</small>", sum.late ? "<span class='down'>grace / geofence</span>" : "clean")}
+          ${kpi("On-time rate", sum.onTime + "%", "<span class='up'>+4 vs May</span>")}
         </div>
-        <div class="grid cols-2">
-          ${card("June", heatcal({ until: 11, levels: { 12: "bad" } }), { icon: "calendar" })}
-          ${card("Recent", table([{ h: "Date" }, { h: "In" }, { h: "Out" }, { h: "Grade" }], [
-          { cells: ["Mon 14", "09:01", "18:02", `<span class="badge ok">evidence</span>`] },
-          { cells: ["Sat 12", "09:18", "18:05", badge("late")] },
-          { cells: ["Fri 11", "08:57", "18:00", `<span class="badge ok">evidence</span>`] },
-          { cells: ["Thu 10", "09:00", "17:58", `<span class="badge ok">evidence</span>`] }
-        ]), { icon: "history" })}
-        </div>`
+        ${card("Attendance · " + CAL.MON3[(m + 10) % 12] + "–" + CAL.MON3[m] + " 2026", CAL.attCalendar(uid), { icon: "calendar" })}
+        <div style="height:16px"></div>
+        ${card("Clock records", table([{ h: "Date" }, { h: "In" }, { h: "Out" }, { h: "Status" }], recs.map(r => ({
+          cells: [`${r.dow} ${r.dd} ${r.mon}`, r.in, r.out, grade(r.st)]
+        }))), { icon: "history", badge: `<span class="badge plain">${recs.length} days</span>` })}
+        ${fixModal(uid)}`
       };
     },
     leave() {
+      const meP = DATA.me();
+      const mine = DATA.LEAVE_REQS.filter(l => l.uid === meP.id || l.who === meP.name);
+      const sel = CAL.selected(), sum = CAL.selSummary(), open = CAL.state.leaveOpen;
       return {
-        title: "Leave", sub: "Request time off · see balance & status",
-        actions: `<button class="btn">${icon("plus")} Request leave</button>`,
+        title: "Time off", sub: "Balance & holidays up top · pick days on the calendar · create an absence",
+        actions: open
+          ? `<button class="btn ghost sm" data-act="leave:close">${icon("x")} Cancel</button>`
+          : `<button class="btn" data-act="leave:open">${icon("plus")} Create absence</button>`,
         body: `
-        <div class="grid cols-3">
-          ${card("Balance", `<div style="display:flex;gap:16px;align-items:center">${donut(53)}<div><div class="num" style="font-size:26px;font-weight:600">8.0</div><div class="small muted">of 15 annual days left</div></div></div>`, { icon: "calendar" })}
-          ${card("My requests", rowlist([
-          rowitem({ icon: "calendar", title: "Annual · 3 days", sub: "22–24 Jun", side: badge("approved") }),
-          rowitem({ icon: "calendar", title: "Sick · 1 day", sub: "5 Jun", side: badge("approved") })
-        ]), { span: 2, icon: "list" })}
-        </div>`
+        <div class="grid cols-2" style="margin-bottom:16px">${balancesCard()}${holidaysCard()}</div>
+        ${card("Calendar", CAL.monthPicker({ months: 3 }), { icon: "calendar", badge: `<span class="small muted">${sel.length ? sel.length + " day" + (sel.length > 1 ? "s" : "") + " selected" : "select day(s)"}</span>` })}
+        <div style="height:16px"></div>
+        ${card("My requests", mine.length ? rowlist(mine.map(l => rowitem({
+          icon: l.tone === "sick" ? "alert" : "calendar", title: `${l.type} · ${l.days} day${l.days > 1 ? "s" : ""}`,
+          sub: CAL.fmtRange(l.from, l.to || l.from) + (l.note ? " · “" + l.note + "”" : ""), side: badge(l.status)
+        }))) : empty("calendar", "No requests yet", "Pick days and create an absence"), { icon: "list" })}
+        ${open ? createAbsenceModal(sel, sum) : ""}`
       };
     },
     schedule() {
+      const tid = DATA.state.tenantId, uid = DATA.me().id;
+      const sel = SCHED.selected(), open = SCHED.state.swapOpen, mineSw = SCHED.mySwaps(tid, uid);
+      const mates = SCHED.roster(tid).filter(p => p.id !== uid).slice(0, 8);
+      const swapPanel = card("Request a shift swap", `<div class="leave-form">
+          <div class="field"><label>Days to swap <span class="small muted">· tap your shifts on the calendar ↑</span></label><div class="leave-sel-sum">${sel.length ? sel.map(d => `<span class="leave-pill">${CAL.fmtShort(d)}</span>`).join("") : `<span class="small muted">No shift days picked yet</span>`}${sel.length ? `<button class="btn xs ghost" data-act="sched:clearsel">${icon("x")} Clear</button>` : ""}</div></div>
+          <div class="field"><label>Give to</label><select class="input" data-swapto><option value="">Open shift · anyone can claim</option>${mates.map(p => `<option value="${UI.esc(p.name)}">${UI.esc(p.name)}</option>`).join("")}</select></div>
+          <div class="field"><label>Note <span class="small muted">· your manager will see this</span></label><textarea class="input" data-swapnote rows="2" placeholder="Why you need the swap"></textarea></div>
+          <div style="display:flex;gap:8px"><button class="btn" data-act="sched:swap-submit"${sel.length ? "" : " disabled"}>${icon("send")} Send for approval</button><button class="btn ghost" data-act="sched:swap-close">Cancel</button></div>
+        </div>`, { icon: "swap" });
       return {
-        title: "My schedule", sub: "Shifts this week · swap or pick an open shift",
-        body: `
-        <div class="grid cols-2">
-          ${card("This week", rowlist(DATA.SHIFTS.map(s => rowitem({
-          icon: "calendar", title: `${s.day} · 09:00–18:00`, sub: s.open ? `${s.open} open shift available` : "Assigned to you",
-          side: s.open ? `<button class="btn xs soft">Claim</button>` : badge("published")
-        }))), { icon: "calendar" })}
-          ${card("Swap a shift", `<p class="small muted" style="margin-bottom:12px">Offer a shift to a teammate — the owner approves, and the Lao OT guardrail (≤3h/day, ≤45h/mo) is auto-checked so a swap can't create illegal overtime.</p>
-            <button class="btn ghost">${icon("swap")} Offer Thu 18 to a teammate</button>`, { icon: "swap" })}
-        </div>`
+        title: "Jobs schedule & shifts", sub: "Your shifts · 3-month view · request a swap (manager approves)",
+        actions: open
+          ? `<button class="btn ghost sm" data-act="sched:swap-close">${icon("x")} Cancel</button>`
+          : `<button class="btn" data-act="sched:swap-open">${icon("swap")} Request shift swap</button>`,
+        body: card("My shifts", SCHED.calendar(tid, { uid }), { icon: "calendar" })
+          + (open ? `<div style="height:16px"></div>${swapPanel}` : "")
+          + `<div style="height:16px"></div>`
+          + card("My swap requests", mineSw.length ? rowlist(mineSw.map(s => rowitem({
+            icon: "swap", title: s.dates.map(CAL.fmtShort).join(", ") + " → " + s.to, sub: s.note || "—", side: badge(s.state)
+          }))) : empty("swap", "No swap requests", "Pick a shift day and request a swap"), { icon: "list" })
       };
     },
     pay() {
@@ -133,8 +274,8 @@ window.SCR_STAFF = (function () {
         title: "My pay", sub: "Payslips · earned-to-date · why every number",
         actions: `<button class="btn ghost sm">${icon("download")} Payslip PDF</button>`,
         body: `
-        <div class="grid cols-3" style="margin-bottom:16px">
-          ${kpi("Next pay", kip(slip.net), `<span class="badge ok">25 Jun</span> · last: May ✓`, { hero: true })}
+        ${payTop3()}
+        <div class="grid cols-2" style="margin-bottom:16px">
           ${FLAGS.on("phoungern", "etd") ? kpi("Earned to date", kip(etd.etdNet), etd.daysWorked + " of " + etd.workdays + " days · live") : kpi("Earned to date", "—", "tracker off in Functions")}
           ${kpi("YTD net", kip(27040000), "Jan–May 2026")}
         </div>
@@ -172,29 +313,37 @@ window.SCR_STAFF = (function () {
       };
     },
     inbox() {
+      const f = ANNOUNCE.feed(DATA.state.tenantId), anns = ANNOUNCE.active(DATA.state.tenantId);
       return {
-        title: "Inbox", sub: "Announcements & alerts · in-app · LINE · WhatsApp",
-        body: card("Messages", rowlist([
-          rowitem({ icon: "banknote", title: "Your June payslip is ready", sub: "in-app · 14 Jun 18:04", side: badge("ok") }),
-          rowitem({ icon: "calendar", title: "Shift reminder — tomorrow 09:00", sub: "LINE · 14 Jun 07:30", neutral: true }),
-          rowitem({ icon: "megaphone", title: "Owner broadcast: Songkran roster", sub: "LINE · 13 Jun 12:00", neutral: true }),
-          rowitem({ icon: "check", title: "Leave approved · 22–24 Jun", sub: "in-app · 12 Jun", neutral: true })
-        ]), { icon: "inbox" })
+        title: "Inbox", sub: "Announcements & alerts · in-app · LINE · WhatsApp — same feed as your Home",
+        body: (anns.length ? announceBanner() : "") +
+          card("All messages", feedRows(null, false), { icon: "inbox", badge: `<span class="badge plain">${f.length}</span>` })
       };
     },
-    me() {
-      return {
-        title: "Me", sub: "Profile · sign-in method · security",
-        body: `
-        <div class="grid cols-2">
-          ${card("Profile", `<div style="display:flex;gap:14px;align-items:center;margin-bottom:8px">${UI.avatar("Khamla Sisombat", true)}<div><div style="font-weight:700;font-size:15px">Khamla Sisombat</div><div class="small muted">Barista · Floor · PG-010</div></div></div>
-            <div class="statline"><div class="sl-it"><span class="sl-v">2 Mar 26</span><span class="sl-l">Joined</span></div><div class="sl-it"><span class="sl-v">Phoungern</span><span class="sl-l">Company</span></div></div>`, { icon: "user" })}
+    me(param) {
+      const section = param || "general", uid = DATA.me().id;
+      const extra = {
+        tabs: [["account", "Account & security"]],
+        render: () => `<div class="grid cols-2">
           ${card("Sign-in & security", rowlist([
-          rowitem({ icon: "key", title: "Password", sub: "Changed 2 weeks ago", side: `<button class="btn xs ghost">Change</button>` }),
-          rowitem({ icon: "phone", title: "This device", sub: "iPhone · active now", side: badge("ok") }),
-          rowitem({ icon: "globe", title: "Language", sub: "English · ລາວ coming", side: `<span class="pending-chip">${icon("globe")} ລາວ soon</span>` })
-        ]), { icon: "shield" })}
+            rowitem({ icon: "key", title: "Password", sub: "Changed 2 weeks ago", side: `<button class="btn xs ghost">Change</button>` }),
+            rowitem({ icon: "phone", title: "This device", sub: "iPhone · active now", side: badge("ok") }),
+            rowitem({ icon: "shield", title: "Two-step sign-in", sub: "Off · recommended", side: `<button class="btn xs ghost">Turn on</button>` })
+          ]), { icon: "shield" })}
+          ${card("Preferences", rowlist([
+            rowitem({ icon: "globe", title: "Language", sub: "English · ລາວ coming", side: `<span class="pending-chip">${icon("globe")} ລາວ soon</span>` }),
+            rowitem({ icon: "bell", title: "Notifications", sub: "Payslip · shifts · approvals", side: badge("ok") })
+          ]), { icon: "sliders" })}
         </div>`
+      };
+      return {
+        title: "Profile", sub: "Your profile, documents & account — the same record your shop keeps",
+        body: PROFILE.page(uid, section, {
+          edit: false,
+          tabHref: (s) => "staff/web/me/" + s,
+          headerRight: `<span class="pending-chip">${icon("lock")} your record · managed by your shop</span>`,
+          extra
+        })
       };
     }
   };
@@ -204,23 +353,21 @@ window.SCR_STAFF = (function () {
     today() {
       return {
         title: "Today", body: `
+        ${announceBanner()}
         <div class="clock-hero">
           <div class="ch-line"><div><div class="ch-sub">Tuesday 15 June</div><div class="ch-time num">— : —</div></div></div>
-          <div class="ch-line" style="margin-top:10px"><div class="ch-sub">You're clocked out · last 18:02 ✓</div><button class="ch-btn">${icon("clock")} Clock in</button></div>
+          <div class="ch-line" style="margin-top:10px"><div class="ch-sub">You're clocked out · last 18:02 ✓</div><button class="ch-btn" data-act="staff:punch">${icon("clock")} Clock in</button></div>
           <div class="geo">${icon("pin")} Main shop · within 30 m</div>
         </div>
         ${kpi("This week", "32.5<small> h</small>", "6 shifts · on track")}
-        ${card("Notices", rowlist([
-          rowitem({ icon: "banknote", title: "Payslip ready", sub: "June", side: badge("ok") }),
-          rowitem({ icon: "calendar", title: "Shift 09:00 tomorrow", sub: "LINE", neutral: true })
-        ]))}`
+        ${card("Notices", feedRows(3, true), { icon: "inbox", link: "staff/mobile/inbox", linkLabel: "Inbox" })}`
       };
     },
     clock() {
       return {
-        title: "Clock", body: `
+        title: "Clock in/out", body: `
         <div class="clock-hero">
-          <div class="ch-line"><div><div class="ch-time num">08:58</div><div class="ch-sub">Selfie + GPS</div></div><button class="ch-btn">${icon("camera")} Clock in</button></div>
+          <div class="ch-line"><div><div class="ch-time num">08:58</div><div class="ch-sub">Selfie + GPS</div></div><button class="ch-btn" data-act="staff:punch">${icon("camera")} Clock in</button></div>
           <div class="geo">${icon("pin")} 12 m from pin · evidence ✓</div>
         </div>
         ${card("Today", rowlist([
@@ -230,11 +377,30 @@ window.SCR_STAFF = (function () {
       };
     },
     leave() {
-      return { title: "Leave", body: `${card("Balance", `<div style="display:flex;gap:14px;align-items:center">${donut(53)}<div><div class="num" style="font-size:22px;font-weight:600">8.0</div><div class="small muted">days left</div></div></div>`)}<button class="btn" style="width:100%;justify-content:center">${icon("plus")} Request leave</button>` };
+      const sel = CAL.selected();
+      if (CAL.state.leaveOpen) {
+        const opts = CAL.LEAVE_TYPES.map(t => `<option value="${t.id}"${CAL.state.type === t.id ? " selected" : ""}>${t.label}</option>`).join("");
+        return {
+          title: "Request leave", back: "staff/mobile/leave",
+          body: `${card("Pick days", CAL.monthPicker(), { icon: "calendar" })}
+            <div style="height:10px"></div>
+            ${card("Details", `<div class="leave-form"><div class="field"><label>Time type</label><select class="input" data-leavetype>${opts}</select></div>
+              <div class="field"><label>Selected · <b>${sel.length}</b> day${sel.length === 1 ? "" : "s"}</label><div class="leave-sel-sum">${sel.length ? sel.map(d => `<span class="leave-pill">${CAL.fmtShort(d)}</span>`).join("") : `<span class="small muted">Tap days above</span>`}</div></div>
+              <button class="btn" style="width:100%;justify-content:center" data-act="leave:submit">${icon("send")} Submit request</button>
+              <button class="btn ghost" style="width:100%;justify-content:center;margin-top:8px" data-act="leave:close">Cancel</button></div>`, { icon: "calCheck" })}`
+        };
+      }
+      const mine = DATA.LEAVE_REQS.filter(l => l.uid === DATA.me().id || l.who === DATA.me().name);
+      return {
+        title: "Leave",
+        body: `${card("Balance", `<div style="display:flex;gap:14px;align-items:center">${donut(53)}<div><div class="num" style="font-size:22px;font-weight:600">8.0</div><div class="small muted">days left</div></div></div>`)}
+          <button class="btn" style="width:100%;justify-content:center;margin:10px 0" data-act="leave:open">${icon("plus")} Request leave</button>
+          ${card("My requests", mine.length ? rowlist(mine.map(l => rowitem({ icon: l.tone === "sick" ? "alert" : "calendar", title: `${l.type} · ${l.days}d`, sub: CAL.fmtRange(l.from, l.to || l.from), side: badge(l.status) }))) : empty("calendar", "No requests yet", ""), { icon: "list" })}`
+      };
     },
     pay() {
       return {
-        title: "Pay", body: `${kpi("Next pay", kip(slip.net), "25 Jun · ready", { hero: true })}
+        title: "Pay", body: `${payTop3()}
         ${card("June payslip", `<div class="tablewrap"><table class="tbl"><tbody>
           <tr><td>Gross</td><td class="r num">${kip(slip.gross)}</td></tr>
           <tr><td>− NSSF</td><td class="r num neg">−247,500</td></tr>
@@ -250,15 +416,48 @@ window.SCR_STAFF = (function () {
           rowitem({ icon: "list", title: "Schedule", go: "staff/mobile/schedule" }),
           rowitem({ icon: "files", title: "Documents", go: "staff/mobile/documents" }),
           rowitem({ icon: "inbox", title: "Inbox", go: "staff/mobile/inbox" }),
-          rowitem({ icon: "user", title: "Me", go: "staff/mobile/me" })
+          rowitem({ icon: "user", title: "Profile", go: "staff/mobile/me" })
         ]))
       };
     },
-    attendance() { return { title: "Attendance", back: "staff/mobile/more", body: card("June", heatcal({ until: 11, levels: { 12: "bad" } })) }; },
+    attendance() {
+      const uid = DATA.me().id;
+      if (CAL.state.fixOpen) {
+        const has = !!CAL.state.fixDate;
+        return {
+          title: "Request a fix", back: "staff/mobile/attendance",
+          body: card("Correct an attendance record", fixFormInner(uid), { icon: "edit" })
+            + `<button class="btn" style="width:100%;justify-content:center;margin-top:4px" data-act="att:fix-submit"${has ? "" : " disabled"}>${icon("send")} Send request</button>`
+            + `<button class="btn ghost" style="width:100%;justify-content:center;margin-top:8px" data-act="att:fix-close">Cancel</button>`
+        };
+      }
+      return {
+        title: "Attendance", back: "staff/mobile/more",
+        body: card("June", heatcal({ until: 11, levels: { 12: "bad" } }))
+          + `<button class="btn" style="width:100%;justify-content:center;margin-top:10px" data-act="att:fix-open">${icon("edit")} Request a fix</button>`
+      };
+    },
     schedule() { return { title: "Schedule", back: "staff/mobile/more", body: card("This week", rowlist(DATA.SHIFTS.slice(0, 5).map(s => rowitem({ icon: "calendar", title: `${s.day} 09:00–18:00`, sub: s.open ? "open shift" : "assigned", side: s.open ? `<button class="btn xs soft">Claim</button>` : badge("published") })))) }; },
     documents() { return { title: "Documents", back: "staff/mobile/more", body: card("", rowlist([rowitem({ icon: "file", title: "Contract", sub: "Signed" }), rowitem({ icon: "idcard", title: "National ID", side: badge("ok") })])) }; },
-    inbox() { return { title: "Inbox", back: "staff/mobile/more", body: card("", rowlist([rowitem({ icon: "banknote", title: "Payslip ready", sub: "in-app" }), rowitem({ icon: "calendar", title: "Shift reminder", sub: "LINE" })])) }; },
-    me() { return { title: "Me", back: "staff/mobile/more", body: card("Profile", `<div style="display:flex;gap:12px;align-items:center">${UI.avatar("Khamla Sisombat", true)}<div><b>Khamla Sisombat</b><div class="small muted">Barista · PG-010</div></div></div>`) }; }
+    inbox() {
+      return {
+        title: "Inbox", back: "staff/mobile/more",
+        body: (ANNOUNCE.active(DATA.state.tenantId).length ? announceBanner() : "") +
+          card("", feedRows(null, false))
+      };
+    },
+    me() {
+      const p = DATA.me();
+      return {
+        title: "Profile", back: "staff/mobile/more",
+        body: card("", `<div style="display:flex;gap:12px;align-items:center">${PROFILE.avatar(p.id, { lg: true })}<div><b>${UI.esc(p.name)}</b><div class="small muted">${UI.esc(p.role)} · ${p.id}</div></div></div>`)
+          + card("", rowlist([
+            rowitem({ icon: "user", title: "Personal Data", go: "staff/web/me/personal" }),
+            rowitem({ icon: "clock", title: "Time", go: "staff/web/me/time" }),
+            rowitem({ icon: "files", title: "Documents", go: "staff/web/me/documents" })
+          ]))
+      };
+    }
   };
 
   return { web, mobile };

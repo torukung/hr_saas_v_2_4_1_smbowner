@@ -13,58 +13,92 @@ window.SCR_PLATFORM = (function () {
 
   const web = {
     overview() {
-      const st = DATA.platformStats();
+      const st = DATA.platformStats(), kyc = window.REG && REG.kycOn();
+      // one master feature switch for the whole platform — KYC & registration on/off (default off)
+      const master = `<div class="kyc-master ${kyc ? "on" : "off"}" style="margin-bottom:16px">
+        <span class="km-ic">${icon("idcard")}</span>
+        <div class="km-main"><div class="km-t">KYC &amp; registration ${kyc ? `<span class="badge ok">on</span>` : `<span class="badge bad">off</span>`}</div>
+          <div class="km-s">${kyc ? "Self-serve shop registration and ID ↔ selfie review are live across the whole platform." : "Registration, the KYC review hub and every related menu are disabled platform-wide. Turn on to open the funnel."}</div></div>
+        <button class="switch" role="switch" aria-checked="${kyc}" data-act="kyc:feature:${kyc ? "off" : "on"}" aria-label="KYC feature on/off"></button>
+      </div>`;
+      const platformLoad = card("Platform load", `<div class="capstrip">
+            ${segMeter("Shared DB rows", 5210, 100000, { unit: "" })}
+            ${segMeter("Workers / day", 12, 100, { unit: "k" })}
+            ${segMeter("Storage (GB)", 0.6, 10, { unit: "GB" })}
+          </div><div class="seal-note ok" style="margin-top:12px">${icon("check")} Shared-schema multi-tenancy — a new tenant is rows, not servers. Free-tier headroom is wide.</div>`, { icon: "pulse" });
       return {
-        title: "Platform overview", sub: "Tenants live · pending KYC · platform load · alerts",
-        body: `
+        title: "Platform overview", sub: "Tenants live · platform load · alerts",
+        body: master + `
         <div class="tilegrid" style="margin-bottom:16px">
           ${tile({ label: "Tenants live", icon: "store", value: st.tenants, sub: `of ${st.total} registered`, accent: true })}
-          ${tile({ label: "Pending KYC", icon: "idcard", value: st.pending, sub: `<span class="badge warn">needs review</span>`, go: "platform/web/registrations" })}
+          ${kyc ? tile({ label: "Pending KYC", icon: "idcard", value: st.pending, sub: `<span class="badge warn">needs review</span>`, go: "platform/web/registrations" }) : tile({ label: "Storage", icon: "box", value: "0.6", sub: "GB · shared" })}
           ${tile({ label: "Seats in use", icon: "users", value: st.seatsUsed, sub: "across the fleet" })}
           ${tile({ label: "Messages this cycle", icon: "chat", value: st.msgUsed, sub: "LINE + WhatsApp" })}
         </div>
         <div class="grid cols-2">
-          ${card("KYC queue", rowlist(DATA.pendingKyc().map(r => rowitem({
-          icon: "idcard", title: r.company, sub: `${r.owner} · ${r.submitted}`,
-          side: `<span class="badge ${r.match === "strong" ? "ok" : "warn"}">${r.match}</span> <button class="btn xs soft" data-go="platform/web/registrations">Review</button>`
-        }))), { icon: "idcard", link: "platform/web/registrations" })}
-          ${card("Platform load", `<div class="capstrip">
-            ${segMeter("Shared DB rows", 5210, 100000, { unit: "" })}
-            ${segMeter("Workers / day", 12, 100, { unit: "k" })}
-            ${segMeter("Storage (GB)", 0.6, 10, { unit: "GB" })}
-          </div><div class="seal-note ok" style="margin-top:12px">${icon("check")} Shared-schema multi-tenancy — a new tenant is rows, not servers. Free-tier headroom is wide.</div>`, { icon: "pulse" })}
+          ${kyc
+          ? card("KYC queue", rowlist(DATA.pendingKyc().map(r => rowitem({
+            icon: "idcard", title: r.company, sub: `${r.owner} · ${r.submitted}`,
+            side: `<span class="badge ${r.match === "strong" ? "ok" : "warn"}">${r.match}</span> <button class="btn xs soft" data-go="platform/web/registrations">Review</button>`
+          }))), { icon: "idcard", link: "platform/web/registrations" })
+          : card("Registration disabled", `<div class="seal-note" style="margin:0">${icon("ban")} <div>KYC &amp; registration is <b>off</b>. New shops can't self-register and the review hub is hidden. Enable it above to reopen the queue.</div></div>`, { icon: "ban" })}
+          ${platformLoad}
         </div>`
       };
     },
 
     registrations() {
-      const pend = DATA.pendingKyc();
-      const focus = pend[0]; // Lao Coffee Lab
+      const pend = REG.pending(), c = REG.counts(), ch = REG.getChannel(), ad = REG.autoDisable(), focus = pend.find(r => r.match === "strong") || pend[0];
+      const stB = (s) => s === "active" ? badge("active") : s === "pending" ? `<span class="badge warn">pending</span>` : s === "disabled" ? `<span class="badge bad">disabled</span>` : `<span class="badge bad">${s}</span>`;
+      const sw = (on) => `<button class="switch" aria-checked="${on}" role="switch" data-act="kyc:autodisable"></button>`;
       return {
-        title: "Registrations", sub: "KYC queue — review ID ↔ selfie · activate / reject",
-        body: band("idcard", "Control plane · KYC", "Not instant self-serve: an owner proves who they are, and you activate by hand — the gate that keeps free safe.") +
-          card(`Review · ${focus.company}`, `
+        title: "KYC & registration", sub: "one hub — register queue · ID↔selfie review · email channel · auto-disable",
+        body: band("idcard", "Control plane · KYC", "Manage the whole funnel here: incoming registrations, KYC verification, the email channel that delivers password/confirmation links, and the auto-disable rule for stale applications.") +
+          `<div class="statline">
+            <div class="sl-it"><span class="sl-v num">${c.pending}</span><span class="sl-l">pending</span></div>
+            <div class="sl-it"><span class="sl-v num">${c.active}</span><span class="sl-l">active</span></div>
+            <div class="sl-it"><span class="sl-v num">${c.disabled}</span><span class="sl-l">auto-disabled</span></div>
+            <div class="sl-it"><span class="sl-v num">${c.total}</span><span class="sl-l">total</span></div>
+          </div>
+          <div class="grid cols-2">
+            ${card("Email channel — password delivery & confirmation", `
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div class="field" style="margin:0"><label>Provider</label><select class="input sm" data-ch="provider"><option ${ch.provider === "SMTP" ? "selected" : ""}>SMTP</option><option ${ch.provider === "ESP" ? "selected" : ""}>ESP (HTTP API)</option></select></div>
+                <div class="field" style="margin:0"><label>Host</label><input class="input sm" data-ch="host" value="${ch.host}"></div>
+                <div class="grid cols-2" style="gap:0 10px"><div class="field" style="margin:0"><label>Port</label><input class="input sm" data-ch="port" value="${ch.port}"></div><div class="field" style="margin:0"><label>From</label><input class="input sm" data-ch="from" value="${ch.from}"></div></div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn sm" data-act="kyc:channel-save">${icon("check")} Save channel</button><button class="btn ghost sm" data-act="kyc:channel-test">${icon("mail")} Send test</button><span class="badge ${ch.status === "connected" ? "ok" : "warn"}">${ch.status}</span></div>
+              </div>
+              <div class="seal-note" style="margin-top:12px">${icon("lock")} On activation the owner is emailed a 72-h set-password link via this channel. Tokens sealed; sends logged as <span class="mono">auth.invite</span>.</div>`, { icon: "mail" })}
+            ${card("Auto-disable stale registrations", `
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">${sw(ad.on)}<div><div style="font-weight:600">Auto-disable ${ad.on ? "on" : "off"}</div><div class="small muted">pending past ${ad.days} days → disabled</div></div></div>
+              ${rowlist([rowitem({ icon: "history", title: "Disabled (stale)", sub: "expired pending registrations", side: `<span class="badge bad">${c.disabled}</span>` }), rowitem({ icon: "clock", title: "Deadline window", sub: ad.days + " days from submit", neutral: true, side: `<span class="badge plain">${ad.days}d</span>` })])}
+              <div class="seal-note ok" style="margin-top:10px">${icon("check")} Keeps the shared free DB clean — abandoned KYC never lingers as a live tenant.</div>`, { icon: "ban" })}
+          </div>
+          <div style="height:16px"></div>` +
+          (focus ? card(`Review · ${focus.company}`, `
           <div class="kyc-review">
-            <div class="kyc-doc"><div class="kd-head">${icon("idcard")} ID card</div><div class="kyc-img">${icon("idcard")}<div class="kdesc">${focus.idType} · name & photo legible</div></div></div>
-            <div class="kyc-doc"><div class="kd-head">${icon("camera")} Owner selfie</div><div class="kyc-img">${icon("user")}<div class="kdesc">Live selfie · compare face ↔ ID</div></div></div>
+            <div class="kyc-doc"><div class="kd-head">${icon("idcard")} ID card</div><div class="kyc-img">${icon("idcard")}<div class="kdesc">${focus.idType} · ${focus.owner}</div></div></div>
+            <div class="kyc-doc"><div class="kd-head">${icon("camera")} Owner selfie</div><div class="kyc-img">${icon("user")}<div class="kdesc">Compare face ↔ ID</div></div></div>
           </div>
           <div class="grid cols-2" style="margin-top:14px">
             <div class="kyc-meta">
-              <div class="kyc-fact">${icon("store")} <span><b>${focus.company}</b> · ${focus.owner}</span></div>
-              <div class="kyc-fact">${icon("mail")} <span>${focus.email} · verified</span></div>
-              <div class="kyc-fact">${icon("phone")} <span>${focus.phone} · verified</span></div>
+              <div class="kyc-fact">${icon("store")} <span><b>${focus.company}</b> · ${focus.entity}</span></div>
+              <div class="kyc-fact">${icon("mail")} <span>${focus.email}</span></div>
+              <div class="kyc-fact">${icon("phone")} <span>${focus.phone}</span></div>
+              <div class="kyc-fact">${icon("clock")} <span>submitted ${focus.submitted} · deadline ${focus.deadline}</span></div>
               <div class="kyc-fact">${icon("check")} <span>Face match: <b>${focus.match}</b></span></div>
             </div>
             <div style="display:flex;flex-direction:column;gap:9px;justify-content:center">
-              <button class="btn ok">${icon("userCheck")} Activate — provision 10/3/1 + seed</button>
-              <button class="btn danger">${icon("x")} Reject with reason</button>
+              <button class="btn ok" data-act="kyc:activate:${focus.id}">${icon("userCheck")} Activate — provision + email link</button>
+              <button class="btn danger" data-act="kyc:reject:${focus.id}">${icon("x")} Reject with reason</button>
             </div>
           </div>
-          <div class="seal-note" style="margin-top:14px">${icon("lock")} <div>Viewing these KYC images is itself audited and time-boxed — opened only for the application under review (<span class="mono">kyc.image_viewed</span>).</div></div>`,
-            { icon: "idcard", badge: `<span class="badge warn">${pend.length} pending</span>` }) +
+          <div class="seal-note" style="margin-top:14px">${icon("lock")} <div>Viewing KYC images is itself audited and time-boxed (<span class="mono">kyc.image_viewed</span>) — opened only for the application under review.</div></div>`,
+            { icon: "idcard", badge: `<span class="badge warn">${c.pending} pending</span>` }) : card("KYC queue", empty("check", "Queue clear", "No pending registrations"), { icon: "idcard" })) +
           `<div style="height:16px"></div>` +
-          card("All registrations", table([{ h: "Ref" }, { h: "Company" }, { h: "Owner" }, { h: "ID type" }, { h: "Submitted" }, { h: "Status" }], DATA.REGISTRATIONS.map(r => ({
-            cells: [`<span class="idtag">${r.id}</span>`, r.company, r.owner, r.idType, r.submitted, statusBadge(r.status)]
+          card("All registrations", table([{ h: "Ref" }, { h: "Company" }, { h: "Owner" }, { h: "Submitted" }, { h: "Deadline" }, { h: "Status" }, { h: "" }], REG.all().map(r => ({
+            cells: [`<span class="idtag">${r.id}</span>`, r.company, r.owner, r.submitted, `<span class="small">${r.deadline || "—"}</span>`, stB(r.status),
+            r.status === "pending" ? `<button class="btn xs soft" data-act="kyc:activate:${r.id}">Activate</button> <button class="btn xs ghost" data-act="kyc:disable:${r.id}">Disable</button>` : ""]
           }))), { icon: "list" })
       };
     },

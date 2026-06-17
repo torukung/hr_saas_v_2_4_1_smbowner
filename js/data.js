@@ -11,9 +11,9 @@ window.DATA = (function () {
   const TENANTS = [
     {
       id: "phoungern", name: "Phoungern Co.", short: "PG", entity: "company", biz: "services", locale: "en",
-      status: "active", plan: "Free", level: "L0", headcount: 21, since: "2026-03-02",
+      status: "active", plan: "Free", level: "L0", headcount: 14, since: "2026-03-02",
       sites: [{ name: "Main shop · Vientiane", lat: 17.9757, lng: 102.6331, radius_m: 30 }],
-      seats: { staff: { used: 10, limit: 10 }, manager: { used: 3, limit: 3 }, admin: { used: 1, limit: 1 } },
+      seats: { staff: { used: 10, limit: 12 }, manager: { used: 3, limit: 4 }, admin: { used: 1, limit: 2 } },
       quota: { line: { used: 38, limit: 50 }, whatsapp: { used: 12, limit: 50 } },
       storage: { used: 0.4, limit: 2 }, owner: "Somchai Phongsavanh",
       month: { revenue: 91000000, otherExp: 17300000, channelFee: 280000 }
@@ -44,7 +44,7 @@ window.DATA = (function () {
       P("PG-002", "Bouasone Vilaykham", "Shift Manager", "Floor", 3200000, "present", { access: "manager" }),
       P("PG-003", "Phetsamone Douangchak", "Shift Manager", "Kitchen", 3000000, "present", { access: "manager" }),
       P("PG-004", "Vilayphone Sengdara", "Supervisor", "Floor", 2800000, "onleave", { access: "manager" }),
-      P("PG-010", "Khamla Sisombat", "Barista", "Floor", 6000000, "present", { access: "staff", you: true }),
+      P("PG-010", "Tinar Sisombat", "Barista", "Floor", 6000000, "present", { access: "staff", you: true }),
       P("PG-011", "Souphaphone Keo", "Barista", "Floor", 2600000, "present", { access: "staff" }),
       P("PG-012", "Daophet Many", "Cashier", "Floor", 2500000, "late", { access: "staff", flag: "geo" }),
       P("PG-013", "Khamphan Sayasith", "Cook", "Kitchen", 2600000, "present", { access: "staff" }),
@@ -78,9 +78,28 @@ window.DATA = (function () {
         n++;
       }
     }
-    pad("phoungern", "PG", 21);
+    pad("phoungern", "PG", 14);
     pad("vientianemart", "VM", 9);
   })();
+
+  /* ---------------- team assignment (manager groups the roster by team) ---------------- */
+  (function () {
+    const teamOf = (p) => (p.access === "owner" || p.access === "manager") ? "Management"
+      : p.div === "Kitchen" ? "Kitchen" : p.div === "Store" ? "Store" : "Floor";
+    Object.keys(PEOPLE).forEach(tid => PEOPLE[tid].forEach(p => { p.team = teamOf(p); }));
+  })();
+  // team meta — display order + accent (named hues, no drift)
+  const TEAMS = [
+    { id: "Management", label: "Management", hue: "ceo" },
+    { id: "Floor", label: "Floor service", hue: "staff" },
+    { id: "Kitchen", label: "Kitchen", hue: "mgr" },
+    { id: "Store", label: "Store", hue: "hr" }
+  ];
+  function teamsFor(tid) {
+    const ppl = people(tid), seen = {};
+    ppl.forEach(p => { (seen[p.team] = seen[p.team] || []).push(p); });
+    return TEAMS.filter(t => seen[t.id]).map(t => Object.assign({}, t, { members: seen[t.id] }));
+  }
 
   /* ---------------- payroll — the verified vector (blueprint BO-4) ---------------- */
   const SS = { er: 0.06, ee: 0.055, cap: 4500000 };
@@ -88,18 +107,18 @@ window.DATA = (function () {
     [0, 1300000, 0], [1300000, 5000000, 0.05], [5000000, 15000000, 0.10],
     [15000000, 25000000, 0.15], [25000000, 65000000, 0.20], [65000000, Infinity, 0.25]
   ];
-  // worked example: Khamla, base 6,000,000 — reconciles to the kip
+  // worked example: Tinar, base 6,000,000 — reconciles to the kip
   const PAYSLIP = {
-    name: "Khamla Sisombat", id: "PG-010", period: "June 2026", base: 6000000, gross: 6000000,
+    name: "Tinar Sisombat", id: "PG-010", period: "June 2026", base: 6000000, gross: 6000000,
     ssBase: 4500000, ssEmp: 247500, ssEr: 270000, taxable: 5752500,
     pitSlices: [{ band: "₭1.3M → 5.0M @ 5%", amt: 185000 }, { band: "₭5.0M → 5.7525M @ 10%", amt: 75250 }],
     pit: 260250, net: 5492250, cost: 6270000,
     remit: { worker: 5492250, nssf: 517500, pit: 260250 }
   };
   const PAYRUNS = [
-    { id: "PR-2026-06", period: "June 2026", state: "draft", people: 21, gross: 54600000, cost: 58420000, pit: 4100000, due: "2026-06-28" },
-    { id: "PR-2026-05", period: "May 2026", state: "closed", people: 21, gross: 54100000, cost: 57890000, pit: 4050000, due: "2026-05-28" },
-    { id: "PR-2026-04", period: "April 2026", state: "closed", people: 20, gross: 51800000, cost: 55410000, pit: 3870000, due: "2026-04-28" }
+    { id: "PR-2026-06", period: "June 2026", state: "draft", people: 14, gross: 41700000, cost: 41700000, pit: 0, due: "2026-06-28" },
+    { id: "PR-2026-05", period: "May 2026", state: "closed", people: 14, gross: 41200000, cost: 41200000, pit: 0, due: "2026-05-28" },
+    { id: "PR-2026-04", period: "April 2026", state: "closed", people: 13, gross: 38500000, cost: 38500000, pit: 0, due: "2026-04-28" }
   ];
 
   /* ---------------- accounting — cashbook (per-tenant, full month so dw_reports replays from it) ---------------- */
@@ -126,11 +145,27 @@ window.DATA = (function () {
       { date: "2026-06-13", kind: "exp", cat: "Utilities", amount: 1500000, method: "transfer", tax: "vat_in" }
     ]
   };
-  // 21-person shop — ties out: 91 − 58.42 − 17.3 − 0.28 = 15.0M
+  /* ---------------- recurring / scheduled expenses (waiting to post) ---------------- */
+  const RECUR_EXPENSES = {
+    phoungern: [
+      { name: "Shop rent", cat: "Rent", amount: 6000000, freq: "monthly", next: "2026-06-20", method: "transfer", tax: "exempt" },
+      { name: "Electricity & water", cat: "Utilities", amount: 1800000, freq: "monthly", next: "2026-06-22", method: "transfer", tax: "vat_in" },
+      { name: "Coffee bean supplier", cat: "Coffee beans (COGS)", amount: 1500000, freq: "weekly", next: "2026-06-18", method: "transfer", tax: "vat_in" },
+      { name: "Internet & LINE plan", cat: "Comms & software", amount: 280000, freq: "monthly", next: "2026-06-25", method: "qr", tax: "vat_in" },
+      { name: "Business license renewal", cat: "Licenses & fees", amount: 2000000, freq: "yearly", next: "2026-12-01", method: "transfer", tax: "exempt" }
+    ],
+    vientianemart: [
+      { name: "Shop rent", cat: "Rent", amount: 4000000, freq: "monthly", next: "2026-06-20", method: "transfer", tax: "exempt" },
+      { name: "Stock replenishment", cat: "Stock purchase", amount: 3500000, freq: "weekly", next: "2026-06-19", method: "transfer", tax: "vat_in" },
+      { name: "Electricity & water", cat: "Utilities", amount: 1500000, freq: "monthly", next: "2026-06-22", method: "transfer", tax: "vat_in" }
+    ]
+  };
+  // legacy seed — NOT used at runtime (LEDGER.rollup computes live: revenue from the cashbook, staff cost from payroll over DATA.people).
+  // 14-person shop (10 staff + 3 mgr + 1 admin = seat allocation): 91 − 41.7 − 17.3 − 0.28 ≈ 31.7M
   const ROLLUP = {
-    revenue: 91000000, staffCost: 58420000, otherExp: 17300000, channelFee: 280000,
-    result: 15000000, margin: 0.165, staffRatio: 0.642, costPerHead: 2782000,
-    trendRev: [78, 81, 85, 88, 90, 91], trendStaff: [52, 53, 55, 56, 57, 58.4]
+    revenue: 91000000, staffCost: 41700000, otherExp: 17300000, channelFee: 280000,
+    result: 31720000, margin: 0.349, staffRatio: 0.458, costPerHead: 2978571,
+    trendRev: [78, 81, 85, 88, 90, 91], trendStaff: [38, 39, 40, 40.5, 41, 41.7]
   };
 
   /* ---------------- tax centre — calendar + tables ---------------- */
@@ -144,9 +179,12 @@ window.DATA = (function () {
   /* ---------------- attendance · leave · schedule ---------------- */
   const ATT_TODAY = { in: 18, total: 21, flags: 2, leave: 1 };
   const LEAVE_REQS = [
-    { id: "LV-241", who: "Souphaphone Keo", type: "Annual", days: 2, from: "2026-06-18", status: "pending" },
-    { id: "LV-240", who: "Khamphan Sayasith", type: "Sick", days: 1, from: "2026-06-15", status: "pending" },
-    { id: "LV-238", who: "Noy Phaketh", type: "Annual", days: 3, from: "2026-06-22", status: "approved" }
+    { id: "LV-241", uid: "PG-011", who: "Souphaphone Keo", type: "Annual leave", typeId: "annual", tone: "leave", days: 2, from: "2026-06-18", to: "2026-06-19", status: "pending" },
+    { id: "LV-240", uid: "PG-013", who: "Khamphan Sayasith", type: "Sick leave", typeId: "sick", tone: "sick", days: 1, from: "2026-06-15", to: "2026-06-15", status: "pending" },
+    { id: "LV-239", uid: "PG-004", who: "Vilayphone Sengdara", type: "Annual leave", typeId: "annual", tone: "leave", days: 4, from: "2026-06-08", to: "2026-06-11", status: "approved" },
+    { id: "LV-238", uid: "PG-014", who: "Noy Phaketh", type: "Annual leave", typeId: "annual", tone: "leave", days: 3, from: "2026-06-22", to: "2026-06-24", status: "approved" },
+    { id: "LV-230", uid: "PG-010", who: "Tinar Sisombat", type: "Annual leave", typeId: "annual", tone: "leave", days: 3, from: "2026-06-22", to: "2026-06-24", status: "approved" },
+    { id: "LV-229", uid: "PG-010", who: "Tinar Sisombat", type: "Sick leave", typeId: "sick", tone: "sick", days: 1, from: "2026-06-05", to: "2026-06-05", status: "approved" }
   ];
   const SHIFTS = [
     { day: "Mon", open: 1, assigned: 6 }, { day: "Tue", open: 0, assigned: 6 }, { day: "Wed", open: 2, assigned: 5 },
@@ -163,7 +201,7 @@ window.DATA = (function () {
 
   /* ---------------- comms outbox (bilingual templates) ---------------- */
   const OUTBOX = [
-    { to: "Khamla Sisombat", ch: "in-app", tpl: "Payslip ready", when: "2026-06-14 18:04", lang: "EN·ລາວ" },
+    { to: "Tinar Sisombat", ch: "in-app", tpl: "Payslip ready", when: "2026-06-14 18:04", lang: "EN·ລາວ" },
     { to: "Souphaphone Keo", ch: "LINE", tpl: "Shift reminder", when: "2026-06-14 07:30", lang: "EN·ລາວ" },
     { to: "All staff", ch: "LINE", tpl: "Owner broadcast", when: "2026-06-13 12:00", lang: "EN·ລາວ" },
     { to: "Daophet Many", ch: "in-app", tpl: "Missing-punch nudge", when: "2026-06-13 19:10", lang: "EN·ລາວ" }
@@ -175,7 +213,7 @@ window.DATA = (function () {
     { fact: "ledger.added", who: "Bouasone V.", when: "2026-06-14 18:40", ref: "rev ₭4.2M" },
     { fact: "comms.sent", who: "system", when: "2026-06-14 18:04", ref: "payslip · in-app" },
     { fact: "flag.set", who: "Somchai P.", when: "2026-06-13 09:02", ref: "EWA → off" },
-    { fact: "auth.signin", who: "Khamla S.", when: "2026-06-15 08:58", ref: "staff portal" }
+    { fact: "auth.signin", who: "Tinar S.", when: "2026-06-15 08:58", ref: "staff portal" }
   ];
 
   /* ---------------- accessors ---------------- */
@@ -186,7 +224,7 @@ window.DATA = (function () {
   function people(tid) { return PEOPLE[tid || state.tenantId] || []; }
   function me() { return PEOPLE.phoungern.find(p => p.you); }
   function activeTenants() { return TENANTS.filter(t => t.status === "active"); }
-  function pendingKyc() { return REGISTRATIONS.filter(r => r.status === "pending"); }
+  function pendingKyc() { return (window.REG && REG.pending) ? REG.pending() : REGISTRATIONS.filter(r => r.status === "pending"); }
 
   // platform totals
   function platformStats() {
@@ -200,7 +238,7 @@ window.DATA = (function () {
 
   return {
     TENANTS, PEOPLE, SS, PIT_BRACKETS, PAYSLIP, PAYRUNS, LEDGER, ROLLUP, TAX_PERIODS,
-    ATT_TODAY, LEAVE_REQS, SHIFTS, REGISTRATIONS, OUTBOX, AUDIT,
-    state, byId, cur, setTenant, people, me, activeTenants, pendingKyc, platformStats
+    ATT_TODAY, LEAVE_REQS, SHIFTS, RECUR_EXPENSES, REGISTRATIONS, OUTBOX, AUDIT, TEAMS,
+    state, byId, cur, setTenant, people, me, activeTenants, pendingKyc, platformStats, teamsFor
   };
 })();

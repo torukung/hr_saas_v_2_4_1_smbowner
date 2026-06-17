@@ -9,7 +9,7 @@
 window.AUTH = (function () {
   // one (or two) demo account(s) per persona; multi-tenant owners included
   const ACCOUNTS = [
-    { email: "staff@phoungern.la", pwd: "staff123", name: "Khamla Sisombat", persona: "staff", scopes: ["staff"], tenant: "phoungern", role: "Barista" },
+    { email: "staff@phoungern.la", pwd: "staff123", name: "Tinar Sisombat", persona: "staff", scopes: ["staff"], tenant: "phoungern", role: "Barista" },
     { email: "staff2@phoungern.la", pwd: "staff123", name: "Souphaphone Keo", persona: "staff", scopes: ["staff"], tenant: "phoungern", role: "Barista" },
     { email: "manager@phoungern.la", pwd: "manager123", name: "Bouasone Vilaykham", persona: "owner", scopes: ["manager"], tenant: "phoungern", role: "Manager · delegated", delegated: true },
     { email: "owner@phoungern.la", pwd: "owner123", name: "Somchai Phongsavanh", persona: "owner", scopes: ["owner"], tenant: "phoungern", role: "Owner" },
