@@ -439,6 +439,13 @@
     if (val === "kyc:autodisable") { REG.setAutoDisable(!REG.autoDisable().on); render(); return toast("Auto-disable " + (REG.autoDisable().on ? "on" : "off")); }
     if (val === "kyc:channel-save") return kycChannelSave();
     if (val === "kyc:channel-test") { REG.testChannel(); render(); return toast("Test email queued via " + REG.getChannel().host); }
+    // ---- platform mail server + alerts (Communications) ----
+    if (val === "mail:save") return mailSave();
+    if (val === "mail:test") { MAIL.test(); render(); return toast("Test email queued via " + MAIL.config().host); }
+    if (val.startsWith("mail:preset:")) { MAIL.applyPreset(val.split(":")[2]); render(); return toast("Preset applied · " + MAIL.config().host + ":" + MAIL.config().port); }
+    if (val.startsWith("mail:alert-toggle:")) { const k = val.slice("mail:alert-toggle:".length), on = MAIL.toggleAlert(k); render(); return toast("Alert " + (on ? "enabled" : "disabled") + " · " + k); }
+    if (val.startsWith("mail:threshold:")) { MAIL.setThreshold(val.split(":")[2]); render(); return toast("Resource-limit alerts at " + MAIL.getThreshold() + "% of cap"); }
+    if (val.startsWith("mail:alert:")) { const p = val.split(":"); const r = MAIL.alertResource(p[3], p[2]); render(); return toast(r.ok ? "Limit alert sent · " + r.subject : r.err, r.ok ? "" : "warn"); }
     if (val.startsWith("profile:")) return profileAct(val);
 
     /* ---- calendar · leave ---- */
@@ -573,6 +580,11 @@
     const g = (k) => { const el = document.querySelector(`[data-ch="${k}"]`); return el ? el.value.trim() : ""; };
     REG.setChannel({ provider: g("provider") || "SMTP", host: g("host"), port: parseInt(g("port"), 10) || 465, from: g("from") });
     render(); toast("Email channel saved · " + REG.getChannel().status);
+  }
+  function mailSave() {
+    const g = (k) => { const el = document.querySelector(`[data-ms="${k}"]`); return el ? el.value.trim() : ""; };
+    MAIL.save({ provider: g("provider"), host: g("host"), port: g("port"), security: g("security"), username: g("username"), from: g("from"), fromName: g("fromName"), replyTo: g("replyTo"), secret: g("secret") });
+    render(); toast("Mail server saved · " + MAIL.config().status);
   }
   function paySaveDraft() {
     const tid = DATA.state.tenantId, by = {};

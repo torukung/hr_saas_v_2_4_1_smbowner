@@ -136,6 +136,7 @@ window.PERSONAS = (function () {
       ]
     }, {
       group: "Platform", items: [
+        { id: "communications", label: "Communications", icon: "mail" },
         { id: "database", label: "Database & ops", icon: "database" },
         { id: "billing", label: "Billing & licensing", icon: "wallet" },
         { id: "security", label: "Security & audit", icon: "shield" },

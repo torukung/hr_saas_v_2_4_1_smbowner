@@ -46,7 +46,7 @@ window.REG = (function () {
   }
   function sendConfirmation(r) { // password delivery / email confirmation via the channel
     DATA.OUTBOX.unshift({ to: r.owner + " <" + r.email + ">", ch: "email", tpl: "Activate your account · set password (72-h link)", when: TODAY + " 17:00", lang: "EN·ລາວ" });
-    DATA.AUDIT.unshift({ fact: "auth.invite", who: "system", when: TODAY, ref: r.email + " · via " + channel.provider });
+    DATA.AUDIT.unshift({ fact: "auth.invite", who: "system", when: TODAY, ref: r.email + " · via " + getChannel().provider });
   }
   // random temporary password (no ambiguous chars)
   function genPassword() { const c = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"; let p = ""; for (let i = 0; i < 10; i++) p += c[Math.floor(Math.random() * c.length)]; return p; }
@@ -58,20 +58,31 @@ window.REG = (function () {
     list.unshift(r);
     DATA.AUDIT.unshift({ fact: "registration.instant", who: form.owner || "applicant", when: TODAY, ref: id + " · " + (form.company || "") + " · no-KYC" });
     DATA.OUTBOX.unshift({ to: form.email, ch: "email", tpl: "Your Adeptio access link · username " + form.email + " · temporary password", when: TODAY + " 17:00", lang: "EN·ລາວ" });
-    DATA.AUDIT.unshift({ fact: "auth.invite", who: "system", when: TODAY, ref: form.email + " · instant access (no-KYC) via " + channel.provider });
+    DATA.AUDIT.unshift({ fact: "auth.invite", who: "system", when: TODAY, ref: form.email + " · instant access (no-KYC) via " + getChannel().provider });
     return r;
   }
   function activate(id) { const r = get(id); if (!r) return; r.status = "active"; DATA.AUDIT.unshift({ fact: "kyc.activated", who: "Platform", when: TODAY, ref: id }); sendConfirmation(r); return r; }
   function reject(id, reason) { const r = get(id); if (!r) return; r.status = "rejected"; r.reason = reason || "not verified"; DATA.AUDIT.unshift({ fact: "kyc.rejected", who: "Platform", when: TODAY, ref: id + " · " + r.reason }); return r; }
   function disable(id) { const r = get(id); if (!r) return; r.status = "disabled"; DATA.AUDIT.unshift({ fact: "kyc.disabled", who: "Platform", when: TODAY, ref: id }); return r; }
 
-  function getChannel() { return channel; }
-  function setChannel(obj) { Object.assign(channel, obj); channel.status = (channel.host && channel.from) ? "connected" : "not configured"; DATA.AUDIT.unshift({ fact: "comms.channel_set", who: "Platform", when: TODAY, ref: channel.provider + " · " + channel.host }); }
-  function testChannel() { DATA.OUTBOX.unshift({ to: channel.from, ch: "email", tpl: "Channel test · " + channel.host, when: TODAY + " 17:05", lang: "EN" }); DATA.AUDIT.unshift({ fact: "comms.channel_test", who: "Platform", when: TODAY, ref: channel.host }); }
+  // The platform mail server (MAIL engine) is the single source of truth. These
+  // delegate to it so the KYC card and the Communications page edit ONE config;
+  // the local `channel` is only a fallback if MAIL hasn't loaded.
+  function getChannel() { return window.MAIL ? MAIL.asChannel() : channel; }
+  function setChannel(obj) {
+    if (window.MAIL) { MAIL.save(obj); return; }
+    Object.assign(channel, obj); channel.status = (channel.host && channel.from) ? "connected" : "not configured";
+    DATA.AUDIT.unshift({ fact: "comms.channel_set", who: "Platform", when: TODAY, ref: channel.provider + " · " + channel.host });
+  }
+  function testChannel() {
+    if (window.MAIL) { MAIL.test(); return; }
+    DATA.OUTBOX.unshift({ to: channel.from, ch: "email", tpl: "Channel test · " + channel.host, when: TODAY + " 17:05", lang: "EN" });
+    DATA.AUDIT.unshift({ fact: "comms.channel_test", who: "Platform", when: TODAY, ref: channel.host });
+  }
 
   const autoDisable = () => ({ on: autoDisableOn, days: autoDisableDays });
   function setAutoDisable(on, days) { autoDisableOn = !!on; if (days) autoDisableDays = days; DATA.AUDIT.unshift({ fact: "kyc.autodisable_" + (on ? "on" : "off"), who: "Platform", when: TODAY, ref: autoDisableDays + "d" }); }
-  function __reset() { list = null; autoDisableOn = true; autoDisableDays = 7; kycEnabled = false; Object.assign(channel, { provider: "SMTP", host: "smtp.adeptio.la", port: 465, from: "noreply@adeptio.la", secure: true, status: "connected" }); }
+  function __reset() { list = null; autoDisableOn = true; autoDisableDays = 7; kycEnabled = false; Object.assign(channel, { provider: "SMTP", host: "smtp.adeptio.la", port: 465, from: "noreply@adeptio.la", secure: true, status: "connected" }); if (window.MAIL) MAIL.__reset(); }
 
   return { TODAY, all, pending, get, counts, submit, registerInstant, activate, reject, disable, sendConfirmation, getChannel, setChannel, testChannel, autoDisable, setAutoDisable, kycOn, setKyc, __reset };
 })();

@@ -11,9 +11,9 @@ window.DATA = (function () {
   const TENANTS = [
     {
       id: "phoungern", name: "Phoungern Co.", short: "PG", entity: "company", biz: "services", locale: "en",
-      status: "active", plan: "Free", level: "L0", headcount: 14, since: "2026-03-02",
+      status: "active", plan: "Free", level: "L2", headcount: 14, since: "2026-03-02",
       sites: [{ name: "Main shop · Vientiane", lat: 17.9757, lng: 102.6331, radius_m: 30 }],
-      seats: { staff: { used: 10, limit: 12 }, manager: { used: 3, limit: 4 }, admin: { used: 1, limit: 2 } },
+      seats: { staff: { used: 8, limit: 10 }, manager: { used: 1, limit: 3 }, admin: { used: 1, limit: 1 } },
       quota: { line: { used: 38, limit: 50 }, whatsapp: { used: 12, limit: 50 } },
       storage: { used: 0.4, limit: 2 }, owner: "Somchai Phongsavanh",
       month: { revenue: 91000000, otherExp: 17300000, channelFee: 280000 }
@@ -116,9 +116,9 @@ window.DATA = (function () {
     remit: { worker: 5492250, nssf: 517500, pit: 260250 }
   };
   const PAYRUNS = [
-    { id: "PR-2026-06", period: "June 2026", state: "draft", people: 14, gross: 41700000, cost: 41700000, pit: 0, due: "2026-06-28" },
-    { id: "PR-2026-05", period: "May 2026", state: "closed", people: 14, gross: 41200000, cost: 41200000, pit: 0, due: "2026-05-28" },
-    { id: "PR-2026-04", period: "April 2026", state: "closed", people: 13, gross: 38500000, cost: 38500000, pit: 0, due: "2026-04-28" }
+    { id: "PR-2026-06", period: "June 2026", state: "draft", people: 14, gross: 41700000, cost: 44112000, pit: 1102075, due: "2026-06-28" },
+    { id: "PR-2026-05", period: "May 2026", state: "closed", people: 14, gross: 41200000, cost: 43580000, pit: 1085000, due: "2026-05-28" },
+    { id: "PR-2026-04", period: "April 2026", state: "closed", people: 13, gross: 38500000, cost: 40720000, pit: 1010000, due: "2026-04-28" }
   ];
 
   /* ---------------- accounting — cashbook (per-tenant, full month so dw_reports replays from it) ---------------- */
@@ -161,11 +161,11 @@ window.DATA = (function () {
     ]
   };
   // legacy seed — NOT used at runtime (LEDGER.rollup computes live: revenue from the cashbook, staff cost from payroll over DATA.people).
-  // 14-person shop (10 staff + 3 mgr + 1 admin = seat allocation): 91 − 41.7 − 17.3 − 0.28 ≈ 31.7M
+  // 14-person shop (L2 statutory): 91 − 44.1 − 17.3 − 0.28 ≈ 29.3M
   const ROLLUP = {
-    revenue: 91000000, staffCost: 41700000, otherExp: 17300000, channelFee: 280000,
-    result: 31720000, margin: 0.349, staffRatio: 0.458, costPerHead: 2978571,
-    trendRev: [78, 81, 85, 88, 90, 91], trendStaff: [38, 39, 40, 40.5, 41, 41.7]
+    revenue: 91000000, staffCost: 44112000, otherExp: 17300000, channelFee: 280000,
+    result: 29308000, margin: 0.322, staffRatio: 0.485, costPerHead: 3150857,
+    trendRev: [78, 81, 85, 88, 90, 91], trendStaff: [40, 41, 42, 43, 43.5, 44.1]
   };
 
   /* ---------------- tax centre — calendar + tables ---------------- */

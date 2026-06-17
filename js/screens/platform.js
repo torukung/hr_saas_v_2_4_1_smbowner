@@ -5,7 +5,7 @@
    never sealed salary / PII / KYC content (break-glass + audited).
    ============================================================ */
 window.SCR_PLATFORM = (function () {
-  const { icon, kip, card, kpi, tile, badge, table, rowlist, rowitem, meter, segMeter, flowRail } = UI;
+  const { icon, kip, card, kpi, tile, badge, table, rowlist, rowitem, meter, segMeter, flowRail, empty } = UI;
   const band = (ic, t, s) => `<div class="intro-band"><div class="ib-ic">${icon(ic)}</div><div><div class="ib-t">${t}</div><div class="ib-s">${s}</div></div></div>`;
 
   const resMeter = (used, total, tone) => `<div class="res-meter">${meter(total ? Math.round(used / total * 100) : 0, tone)}<span class="mono">${used}/${total}</span></div>`;
@@ -120,9 +120,28 @@ window.SCR_PLATFORM = (function () {
     },
 
     resources() {
+      const m = window.MAIL ? MAIL.config() : { status: "—", host: "—", port: "" };
+      const breaches = window.MAIL ? MAIL.breachingTenants() : [];
+      const thr = window.MAIL ? MAIL.getThreshold() : 80;
+      // mail-server status strip — links to the full Communications config
+      const mailStrip = card("Email server", `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="badge ${m.status === "connected" ? "ok" : "warn"}">${m.status}</span>
+          <span class="mono small">${m.host}${m.port ? ":" + m.port : ""}</span>
+          <span class="small muted">·</span>
+          <span class="small">${window.MAIL && MAIL.alertOn("reslimit") ? "Resource-limit alerts on at " + thr + "% of cap" : "Resource-limit alerts off"}</span>
+        </div>`, { icon: "mail", link: "platform/web/communications", linkLabel: "Configure" });
+      // tenants at/over the alert threshold → one-tap "send limit alert"
+      const alertsCard = card("Allocation alerts", breaches.length
+        ? rowlist(breaches.map(({ t, breaches: bs }) => rowitem({
+          icon: "alert", title: t.name, sub: bs.map(b => b.label + " " + b.pct + "%").join(" · "),
+          side: `<button class="btn xs soft" data-act="mail:alert:${bs[0].metric}:${t.id}">${icon("send")} Send alert</button>`
+        })))
+        : empty("check", "All within limits", "No tenant is at " + thr + "% of a cap right now"),
+        { icon: "bell", badge: breaches.length ? `<span class="badge warn">${breaches.length} near cap</span>` : `<span class="badge ok">clear</span>` });
       return {
         title: "Resources", sub: "per-tenant: seats · messages · storage · activity",
         body: band("gauge", "Control plane · Resources", "Live meters per shop. The numbers are metadata — counts & usage, never the content behind them.") +
+          mailStrip +
           card("Per-tenant", `<div class="tablewrap"><table class="tbl">
             <thead><tr><th>Tenant</th><th>Plan</th><th>Seats (S/M/A)</th><th>LINE</th><th>WhatsApp</th><th>Storage</th><th>Status</th><th>Allocate</th></tr></thead>
             <tbody>${DATA.TENANTS.map(t => {
@@ -139,7 +158,8 @@ window.SCR_PLATFORM = (function () {
                 <td><button class="btn xs soft" data-go="platform/web/allocation">+ seats · msg</button></td>
               </tr>`;
           }).join("")}</tbody>
-          </table></div>`, { icon: "gauge" })
+          </table></div>`, { icon: "gauge" }) +
+          `<div style="height:16px"></div>` + alertsCard
       };
     },
 
@@ -233,6 +253,80 @@ window.SCR_PLATFORM = (function () {
             { cells: ["Billing", "billing@adeptio.la", `<span class="badge plain">billing</span>`, badge("pending")] }
           ]), { icon: "users" })
       };
+    },
+
+    // Communications — the single mail server every platform email goes through
+    // (activation links + system alerts). The KYC hub's email-channel reads this
+    // same config (REG delegates to MAIL).
+    communications() {
+      const cfg = MAIL.config(), cred = MAIL.credentialsSet(), thr = MAIL.getThreshold(), logs = MAIL.log();
+      const alertsOn = MAIL.CATALOG.filter(c => c.kind === "alert" && MAIL.alertOn(c.key)).length;
+      const provSel = (v) => `<select class="input sm" data-ms="provider"><option ${v === "SMTP" ? "selected" : ""}>SMTP</option><option value="ESP (HTTP API)" ${v === "ESP (HTTP API)" ? "selected" : ""}>ESP (HTTP API)</option></select>`;
+      const secSel = (v) => `<select class="input sm" data-ms="security">
+          <option value="ssl" ${v === "ssl" ? "selected" : ""}>SSL / TLS · port 465</option>
+          <option value="starttls" ${v === "starttls" ? "selected" : ""}>STARTTLS · port 587</option>
+          <option value="none" ${v === "none" ? "selected" : ""}>None (not recommended)</option>
+        </select>`;
+      const presetBtns = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          ${Object.keys(MAIL.PRESETS).map(k => `<button class="btn ghost sm" data-act="mail:preset:${k}">${icon("mail")} ${MAIL.PRESETS[k].label}</button>`).join("")}</div>`;
+
+      const serverCard = card("Mail server · SMTP", `${presetBtns}
+        <div class="grid cols-2" style="gap:0 14px">
+          <div class="field" style="margin:0 0 10px"><label>Provider</label>${provSel(cfg.provider)}</div>
+          <div class="field" style="margin:0 0 10px"><label>Security</label>${secSel(cfg.security)}</div>
+        </div>
+        <div class="grid cols-2" style="gap:0 14px">
+          <div class="field" style="margin:0 0 10px"><label>SMTP host</label><input class="input sm" data-ms="host" value="${cfg.host}"></div>
+          <div class="field" style="margin:0 0 10px"><label>Port</label><input class="input sm" data-ms="port" value="${cfg.port}"></div>
+        </div>
+        <div class="field" style="margin:0 0 10px"><label>Username · full Gmail address</label><input class="input sm" data-ms="username" value="${cfg.username}" placeholder="you@gmail.com"></div>
+        <div class="field" style="margin:0 0 10px"><label>App Password · 16 chars (held on the Worker, never stored here)</label><input class="input sm" type="password" data-ms="secret" placeholder="${cfg.hasSecret ? "•••• •••• •••• ••••  · set" : "paste the Gmail App Password"}"></div>
+        <div class="grid cols-2" style="gap:0 14px">
+          <div class="field" style="margin:0 0 10px"><label>From address</label><input class="input sm" data-ms="from" value="${cfg.from}"></div>
+          <div class="field" style="margin:0 0 10px"><label>From name</label><input class="input sm" data-ms="fromName" value="${cfg.fromName}"></div>
+        </div>
+        <div class="field" style="margin:0 0 12px"><label>Reply-to · optional</label><input class="input sm" data-ms="replyTo" value="${cfg.replyTo}" placeholder="support@adeptio.la"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn sm" data-act="mail:save">${icon("check")} Save server</button>
+          <button class="btn ghost sm" data-act="mail:test">${icon("send")} Send test</button>
+          <span class="badge ${cfg.status === "connected" ? "ok" : "warn"}">${cfg.status}</span>
+          <span class="badge ${cred ? "ok" : "warn"}">${cred ? "credentials set" : "needs App Password"}</span>
+        </div>
+        <div class="seal-note" style="margin-top:12px">${icon("lock")} <div>Consumer Gmail rewrites <b>From</b> to the signed-in address. To send as <span class="mono">@adeptio.la</span> use a Workspace relay or a verified “Send mail as” alias. The App Password lives on the Cloudflare Worker — never in the browser or the database.</div></div>`,
+        { icon: "server", badge: `<span class="badge plain">${cfg.host}:${cfg.port}</span>` });
+
+      const catRow = (c) => {
+        if (c.kind === "transactional") return rowitem({ icon: c.icon, title: c.label, sub: c.desc, side: `<span class="badge ok">always on</span>` });
+        const on = MAIL.alertOn(c.key);
+        return rowitem({ icon: c.icon, title: c.label, sub: c.desc, side: `<button class="switch" role="switch" aria-checked="${on}" data-act="mail:alert-toggle:${c.key}" aria-label="${c.label}"></button>` });
+      };
+      const thrBtns = [70, 75, 80, 90].map(p => `<button class="btn xs ${p === thr ? "" : "ghost"}" data-act="mail:threshold:${p}">${p}%</button>`).join(" ");
+      const catalogCard = card("What this server sends", `
+        <div class="small muted" style="margin-bottom:8px">Transactional mail keeps the funnel running — it can't be turned off. Alerts are optional and go to the platform operators.</div>
+        ${rowlist(MAIL.CATALOG.map(catRow))}
+        ${MAIL.alertOn("reslimit") ? `<div class="seal-note" style="margin-top:10px;align-items:center"><div style="flex:1">${icon("gauge")} Notify when a tenant reaches <b>${thr}%</b> of any cap — seats · messages · storage</div><div style="display:flex;gap:6px">${thrBtns}</div></div>` : ""}
+        <div class="seal-note ok" style="margin-top:10px">${icon("mail")} <div>Alert recipients: ${MAIL.recipients.map(r => `<span class="mono">${r}</span>`).join(", ")}</div></div>`,
+        { icon: "bell" });
+
+      const kindBadge = (k) => (k === "activation" || k === "password") ? `<span class="badge plain">transactional</span>` : k === "test" ? `<span class="badge plain">test</span>` : `<span class="badge warn">alert</span>`;
+      const logCard = card("Recent sends", table([{ h: "To" }, { h: "Subject" }, { h: "Type" }, { h: "When" }, { h: "State" }],
+        logs.slice(0, 8).map(l => ({ cells: [`<span class="small">${l.to}</span>`, l.subject, kindBadge(l.kind), `<span class="small">${l.when}</span>`, `<span class="badge ${l.state === "sent" ? "ok" : "warn"}">${l.state}</span>`] }))),
+        { icon: "history", badge: `<span class="badge plain">via ${cfg.host}</span>` });
+
+      const stat = `<div class="statline">
+        <div class="sl-it"><span class="sl-v">${cfg.status === "connected" ? "Connected" : "Setup"}</span><span class="sl-l">server</span></div>
+        <div class="sl-it"><span class="sl-v num">${cfg.port}</span><span class="sl-l">${cfg.security.toUpperCase()}</span></div>
+        <div class="sl-it"><span class="sl-v num">${alertsOn}</span><span class="sl-l">alerts on</span></div>
+        <div class="sl-it"><span class="sl-v num">${logs.length}</span><span class="sl-l">recent sends</span></div>
+      </div>`;
+
+      return {
+        title: "Communications", sub: "email server · activation links · system alerts",
+        body: band("mail", "Control plane · Communications", "The single mail server every platform email goes through — account activation links, password resets, and operational alerts like a tenant nearing its resource cap.") +
+          stat +
+          `<div class="grid cols-2">${serverCard}${catalogCard}</div>` +
+          `<div style="height:16px"></div>` + logCard
+      };
     }
   };
 
@@ -253,7 +347,7 @@ window.SCR_PLATFORM = (function () {
         title: "KYC", body: `${card(f.company, `<div class="kyc-review"><div class="kyc-doc"><div class="kd-head">${icon("idcard")} ID</div><div class="kyc-img">${icon("idcard")}</div></div><div class="kyc-doc"><div class="kd-head">${icon("camera")} Selfie</div><div class="kyc-img">${icon("user")}</div></div></div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn ok" style="flex:1;justify-content:center">${icon("userCheck")} Activate</button><button class="btn danger" style="flex:1;justify-content:center">${icon("x")} Reject</button></div>`)}` };
     },
     tenants() { return { title: "Tenants", body: card("", rowlist(DATA.TENANTS.map(t => rowitem({ icon: "store", title: t.name, sub: `${t.plan} · ${t.status}`, side: statusBadge(t.status) })))) }; },
-    more() { return { title: "More", body: card("", rowlist([rowitem({ icon: "gauge", title: "Resources", go: "platform/web/resources" }), rowitem({ icon: "sliders", title: "Allocation", go: "platform/web/allocation" }), rowitem({ icon: "database", title: "Database & ops", go: "platform/web/database" }), rowitem({ icon: "shield", title: "Security & audit", go: "platform/web/security" })])) }; }
+    more() { return { title: "More", body: card("", rowlist([rowitem({ icon: "gauge", title: "Resources", go: "platform/web/resources" }), rowitem({ icon: "sliders", title: "Allocation", go: "platform/web/allocation" }), rowitem({ icon: "mail", title: "Communications", go: "platform/web/communications" }), rowitem({ icon: "database", title: "Database & ops", go: "platform/web/database" }), rowitem({ icon: "shield", title: "Security & audit", go: "platform/web/security" })])) }; }
   };
 
   return { web, mobile };

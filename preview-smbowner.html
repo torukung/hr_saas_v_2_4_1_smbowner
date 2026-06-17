@@ -1893,9 +1893,9 @@ window.DATA = (function () {
   const TENANTS = [
     {
       id: "phoungern", name: "Phoungern Co.", short: "PG", entity: "company", biz: "services", locale: "en",
-      status: "active", plan: "Free", level: "L0", headcount: 14, since: "2026-03-02",
+      status: "active", plan: "Free", level: "L2", headcount: 14, since: "2026-03-02",
       sites: [{ name: "Main shop · Vientiane", lat: 17.9757, lng: 102.6331, radius_m: 30 }],
-      seats: { staff: { used: 10, limit: 12 }, manager: { used: 3, limit: 4 }, admin: { used: 1, limit: 2 } },
+      seats: { staff: { used: 8, limit: 10 }, manager: { used: 1, limit: 3 }, admin: { used: 1, limit: 1 } },
       quota: { line: { used: 38, limit: 50 }, whatsapp: { used: 12, limit: 50 } },
       storage: { used: 0.4, limit: 2 }, owner: "Somchai Phongsavanh",
       month: { revenue: 91000000, otherExp: 17300000, channelFee: 280000 }
@@ -1998,9 +1998,9 @@ window.DATA = (function () {
     remit: { worker: 5492250, nssf: 517500, pit: 260250 }
   };
   const PAYRUNS = [
-    { id: "PR-2026-06", period: "June 2026", state: "draft", people: 14, gross: 41700000, cost: 41700000, pit: 0, due: "2026-06-28" },
-    { id: "PR-2026-05", period: "May 2026", state: "closed", people: 14, gross: 41200000, cost: 41200000, pit: 0, due: "2026-05-28" },
-    { id: "PR-2026-04", period: "April 2026", state: "closed", people: 13, gross: 38500000, cost: 38500000, pit: 0, due: "2026-04-28" }
+    { id: "PR-2026-06", period: "June 2026", state: "draft", people: 14, gross: 41700000, cost: 44112000, pit: 1102075, due: "2026-06-28" },
+    { id: "PR-2026-05", period: "May 2026", state: "closed", people: 14, gross: 41200000, cost: 43580000, pit: 1085000, due: "2026-05-28" },
+    { id: "PR-2026-04", period: "April 2026", state: "closed", people: 13, gross: 38500000, cost: 40720000, pit: 1010000, due: "2026-04-28" }
   ];
 
   /* ---------------- accounting — cashbook (per-tenant, full month so dw_reports replays from it) ---------------- */
@@ -2043,11 +2043,11 @@ window.DATA = (function () {
     ]
   };
   // legacy seed — NOT used at runtime (LEDGER.rollup computes live: revenue from the cashbook, staff cost from payroll over DATA.people).
-  // 14-person shop (10 staff + 3 mgr + 1 admin = seat allocation): 91 − 41.7 − 17.3 − 0.28 ≈ 31.7M
+  // 14-person shop (L2 statutory): 91 − 44.1 − 17.3 − 0.28 ≈ 29.3M
   const ROLLUP = {
-    revenue: 91000000, staffCost: 41700000, otherExp: 17300000, channelFee: 280000,
-    result: 31720000, margin: 0.349, staffRatio: 0.458, costPerHead: 2978571,
-    trendRev: [78, 81, 85, 88, 90, 91], trendStaff: [38, 39, 40, 40.5, 41, 41.7]
+    revenue: 91000000, staffCost: 44112000, otherExp: 17300000, channelFee: 280000,
+    result: 29308000, margin: 0.322, staffRatio: 0.485, costPerHead: 3150857,
+    trendRev: [78, 81, 85, 88, 90, 91], trendStaff: [40, 41, 42, 43, 43.5, 44.1]
   };
 
   /* ---------------- tax centre — calendar + tables ---------------- */
@@ -2761,6 +2761,165 @@ window.WORK = (function () {
 
 ;
 /* ============================================================
+   ADEPTIO · platform mail server + alerts engine (Communications)
+   ------------------------------------------------------------
+   ONE place the whole platform sends email from. Two job kinds:
+   · transactional — activation link, password reset (always on)
+   · alerts        — resource-limit, KYC pending, billing (toggleable)
+
+   The KYC & registration hub's "email channel" now reads/writes
+   THIS config (REG.getChannel/setChannel/testChannel delegate here),
+   so there is a SINGLE server, not two.
+
+   Demo note: this captures + validates config and logs sends to the
+   outbox/audit. Actual delivery is server-side — the Cloudflare Worker
+   mail relay opens SMTP (465/587) to this host at runtime; the secret
+   (App Password) lives on the Worker, never in the browser or the DB.
+   In-memory; recompute-on-render. No backend this pass.
+   ============================================================ */
+window.MAIL = (function () {
+  const TODAY = "2026-06-17";
+
+  /* ---------------- the one SMTP server every email goes through ---------------- */
+  const DEFAULT = {
+    provider: "SMTP",                       // SMTP | ESP (HTTP API)
+    host: "smtp.gmail.com",
+    port: 465,
+    security: "ssl",                        // ssl (465) · starttls (587) · none
+    username: "adeptio.stage@gmail.com",    // the full Gmail address that authenticates
+    from: "adeptio.stage@gmail.com",        // consumer Gmail forces From = the authenticated address
+    fromName: "Adeptio HR",
+    replyTo: "",
+    hasSecret: true                         // App Password held server-side (never stored here)
+  };
+  let cfg = Object.assign({}, DEFAULT);
+
+  // status is DERIVED, never stored stale — keeps back-compat with the old REG channel
+  // (which was "connected" once host + from were present).
+  function status() { return (cfg.host && cfg.from) ? "connected" : "not configured"; }
+  function credentialsSet() { return !!(cfg.username && cfg.hasSecret); }
+  function config() { return Object.assign({}, cfg, { status: status() }); }
+  // the shape the KYC card / REG.getChannel() expect
+  function asChannel() { return { provider: cfg.provider, host: cfg.host, port: cfg.port, from: cfg.from, secure: cfg.security !== "none", status: status() }; }
+
+  function save(obj) {
+    obj = obj || {};
+    ["provider", "host", "from", "fromName", "replyTo", "username", "security"].forEach(k => {
+      if (obj[k] !== undefined && String(obj[k]).trim() !== "") cfg[k] = String(obj[k]).trim();
+    });
+    if (obj.port !== undefined && String(obj.port).trim() !== "") cfg.port = parseInt(obj.port, 10) || cfg.port;
+    if (obj.secret) cfg.hasSecret = true;                 // a secret was entered → held server-side
+    if (obj.hasSecret !== undefined) cfg.hasSecret = !!obj.hasSecret;
+    DATA.AUDIT.unshift({ fact: "comms.server_set", who: "Platform", when: TODAY, ref: cfg.provider + " · " + cfg.host + ":" + cfg.port });
+    return config();
+  }
+
+  /* ---------------- Gmail / Workspace one-tap presets ---------------- */
+  const PRESETS = {
+    gmail:     { provider: "SMTP", host: "smtp.gmail.com",       port: 465, security: "ssl",      label: "Gmail · SSL 465" },
+    gmail587:  { provider: "SMTP", host: "smtp.gmail.com",       port: 587, security: "starttls", label: "Gmail · STARTTLS 587" },
+    workspace: { provider: "SMTP", host: "smtp-relay.gmail.com", port: 587, security: "starttls", label: "Workspace relay · 587" }
+  };
+  function applyPreset(id) {
+    const p = PRESETS[id]; if (!p) return config();
+    cfg.provider = p.provider; cfg.host = p.host; cfg.port = p.port; cfg.security = p.security;
+    DATA.AUDIT.unshift({ fact: "comms.server_preset", who: "Platform", when: TODAY, ref: id + " · " + cfg.host + ":" + cfg.port });
+    return config();
+  }
+
+  /* ---------------- the email catalogue: what this server sends ---------------- */
+  // transactional = the funnel can't run without it → always on (no toggle)
+  const CATALOG = [
+    { key: "activation", kind: "transactional", label: "Account activation link", desc: "72-h set-password link on registration / KYC approval", icon: "userCheck" },
+    { key: "password",   kind: "transactional", label: "Password reset",          desc: "Self-serve reset link for any account",                 icon: "key" },
+    { key: "reslimit",   kind: "alert",         label: "Resource-limit alert",     desc: "A tenant crosses its seat / message / storage cap",     icon: "gauge",  def: true },
+    { key: "kycpending", kind: "alert",         label: "KYC pending reminder",     desc: "A new shop is waiting for review",                      icon: "idcard", def: true },
+    { key: "billing",    kind: "alert",         label: "Billing & licensing",      desc: "Metered-channel statements and plan changes",           icon: "wallet", def: false }
+  ];
+  const alerts = {};
+  CATALOG.filter(c => c.kind === "alert").forEach(c => alerts[c.key] = c.def);
+  const alertOn = (key) => !!alerts[key];
+  function toggleAlert(key) {
+    if (key in alerts) { alerts[key] = !alerts[key]; DATA.AUDIT.unshift({ fact: "comms.alert_" + (alerts[key] ? "on" : "off"), who: "Platform", when: TODAY, ref: key }); }
+    return alertOn(key);
+  }
+
+  let threshold = 75;                          // notify at ≥ N% of a cap
+  const getThreshold = () => threshold;
+  function setThreshold(pct) {
+    pct = parseInt(pct, 10);
+    if (pct >= 50 && pct <= 100) { threshold = pct; DATA.AUDIT.unshift({ fact: "comms.threshold_set", who: "Platform", when: TODAY, ref: pct + "%" }); }
+    return threshold;
+  }
+
+  // platform operators who receive alerts (the recipient side)
+  const recipients = ["platform@adeptio.la"];
+
+  /* ---------------- send log (newest first) — seeded so the screen reads alive ---------------- */
+  const SEED = [
+    { to: "vk@sabaidee.la",       subject: "Activate your Adeptio account · set password", kind: "activation", when: "2026-06-17 09:12", via: "smtp.gmail.com", state: "sent" },
+    { to: "platform@adeptio.la",  subject: "Phoungern Co. — LINE quota at 76%",            kind: "reslimit",   when: "2026-06-16 22:40", via: "smtp.gmail.com", state: "sent" }
+  ];
+  let log = SEED.slice();
+  const logList = () => log.slice();
+  function record(to, subject, kind) {
+    const rec = { to, subject, kind, when: TODAY + " 17:00", via: cfg.host, state: status() === "connected" ? "sent" : "queued" };
+    log.unshift(rec);
+    DATA.OUTBOX.unshift({ to, ch: "email", tpl: subject, when: rec.when, lang: "EN·ລາວ" });
+    return rec;
+  }
+
+  // send a typed email through the server (used by REG + the alert actions)
+  function send(kind, to, subject) {
+    const rec = record(to, subject, kind);
+    DATA.AUDIT.unshift({ fact: "comms.sent", who: "system", when: rec.when, ref: kind + " → " + to + " · via " + cfg.host });
+    return rec;
+  }
+  function test() {
+    const rec = record(cfg.from || "platform@adeptio.la", "Adeptio · mail-server test", "test");
+    DATA.AUDIT.unshift({ fact: "comms.server_test", who: "Platform", when: rec.when, ref: cfg.host + ":" + cfg.port });
+    return rec;
+  }
+
+  /* ---------------- resource-limit detection (drives the alert) ---------------- */
+  const pct = (u, l) => l ? Math.round(u / l * 100) : 0;
+  function tenantBreaches(t) {
+    if (!t || t.status !== "active") return [];
+    const out = [];
+    if (t.seats) { const s = t.seats.staff; if (pct(s.used, s.limit) >= threshold) out.push({ metric: "seats", label: "Staff seats", used: s.used, limit: s.limit, pct: pct(s.used, s.limit) }); }
+    if (t.quota) ["line", "whatsapp"].forEach(m => { const q = t.quota[m]; if (q && pct(q.used, q.limit) >= threshold) out.push({ metric: m, label: m === "line" ? "LINE messages" : "WhatsApp messages", used: q.used, limit: q.limit, pct: pct(q.used, q.limit) }); });
+    if (t.storage) { const g = t.storage; if (pct(g.used, g.limit) >= threshold) out.push({ metric: "storage", label: "Storage", used: g.used, limit: g.limit, pct: pct(g.used, g.limit) }); }
+    return out;
+  }
+  // active tenants with at least one meter at/over the threshold (for the Resources page card)
+  function breachingTenants() {
+    return DATA.TENANTS.filter(t => t.status === "active").map(t => ({ t, breaches: tenantBreaches(t) })).filter(x => x.breaches.length);
+  }
+  function alertResource(tid, metric) {
+    const t = DATA.byId(tid); if (!t) return { ok: false, err: "Unknown tenant" };
+    if (!alertOn("reslimit")) return { ok: false, err: "Resource-limit alerts are off — enable them in Communications" };
+    const b = (metric && tenantBreaches(t).find(x => x.metric === metric)) || tenantBreaches(t)[0];
+    const subject = t.name + " — " + (b ? b.label + " at " + b.pct + "%" : "resource limit reached");
+    recipients.forEach(r => send("reslimit", r, subject));
+    return { ok: true, subject };
+  }
+
+  function __reset() {
+    cfg = Object.assign({}, DEFAULT);
+    threshold = 75;
+    CATALOG.filter(c => c.kind === "alert").forEach(c => alerts[c.key] = c.def);
+    log = SEED.slice();
+  }
+
+  return {
+    TODAY, config, asChannel, save, applyPreset, PRESETS, CATALOG,
+    alertOn, toggleAlert, getThreshold, setThreshold, credentialsSet, recipients,
+    log: logList, send, test, record, tenantBreaches, breachingTenants, alertResource, status, __reset
+  };
+})();
+
+;
+/* ============================================================
    ADEPTIO · registration + KYC engine (blueprint §2 · BO-11/12)
    Public self-serve register → pending → Platform activates →
    password/activation email via the configured channel. Pending
@@ -2808,7 +2967,7 @@ window.REG = (function () {
   }
   function sendConfirmation(r) { // password delivery / email confirmation via the channel
     DATA.OUTBOX.unshift({ to: r.owner + " <" + r.email + ">", ch: "email", tpl: "Activate your account · set password (72-h link)", when: TODAY + " 17:00", lang: "EN·ລາວ" });
-    DATA.AUDIT.unshift({ fact: "auth.invite", who: "system", when: TODAY, ref: r.email + " · via " + channel.provider });
+    DATA.AUDIT.unshift({ fact: "auth.invite", who: "system", when: TODAY, ref: r.email + " · via " + getChannel().provider });
   }
   // random temporary password (no ambiguous chars)
   function genPassword() { const c = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"; let p = ""; for (let i = 0; i < 10; i++) p += c[Math.floor(Math.random() * c.length)]; return p; }
@@ -2820,20 +2979,31 @@ window.REG = (function () {
     list.unshift(r);
     DATA.AUDIT.unshift({ fact: "registration.instant", who: form.owner || "applicant", when: TODAY, ref: id + " · " + (form.company || "") + " · no-KYC" });
     DATA.OUTBOX.unshift({ to: form.email, ch: "email", tpl: "Your Adeptio access link · username " + form.email + " · temporary password", when: TODAY + " 17:00", lang: "EN·ລາວ" });
-    DATA.AUDIT.unshift({ fact: "auth.invite", who: "system", when: TODAY, ref: form.email + " · instant access (no-KYC) via " + channel.provider });
+    DATA.AUDIT.unshift({ fact: "auth.invite", who: "system", when: TODAY, ref: form.email + " · instant access (no-KYC) via " + getChannel().provider });
     return r;
   }
   function activate(id) { const r = get(id); if (!r) return; r.status = "active"; DATA.AUDIT.unshift({ fact: "kyc.activated", who: "Platform", when: TODAY, ref: id }); sendConfirmation(r); return r; }
   function reject(id, reason) { const r = get(id); if (!r) return; r.status = "rejected"; r.reason = reason || "not verified"; DATA.AUDIT.unshift({ fact: "kyc.rejected", who: "Platform", when: TODAY, ref: id + " · " + r.reason }); return r; }
   function disable(id) { const r = get(id); if (!r) return; r.status = "disabled"; DATA.AUDIT.unshift({ fact: "kyc.disabled", who: "Platform", when: TODAY, ref: id }); return r; }
 
-  function getChannel() { return channel; }
-  function setChannel(obj) { Object.assign(channel, obj); channel.status = (channel.host && channel.from) ? "connected" : "not configured"; DATA.AUDIT.unshift({ fact: "comms.channel_set", who: "Platform", when: TODAY, ref: channel.provider + " · " + channel.host }); }
-  function testChannel() { DATA.OUTBOX.unshift({ to: channel.from, ch: "email", tpl: "Channel test · " + channel.host, when: TODAY + " 17:05", lang: "EN" }); DATA.AUDIT.unshift({ fact: "comms.channel_test", who: "Platform", when: TODAY, ref: channel.host }); }
+  // The platform mail server (MAIL engine) is the single source of truth. These
+  // delegate to it so the KYC card and the Communications page edit ONE config;
+  // the local `channel` is only a fallback if MAIL hasn't loaded.
+  function getChannel() { return window.MAIL ? MAIL.asChannel() : channel; }
+  function setChannel(obj) {
+    if (window.MAIL) { MAIL.save(obj); return; }
+    Object.assign(channel, obj); channel.status = (channel.host && channel.from) ? "connected" : "not configured";
+    DATA.AUDIT.unshift({ fact: "comms.channel_set", who: "Platform", when: TODAY, ref: channel.provider + " · " + channel.host });
+  }
+  function testChannel() {
+    if (window.MAIL) { MAIL.test(); return; }
+    DATA.OUTBOX.unshift({ to: channel.from, ch: "email", tpl: "Channel test · " + channel.host, when: TODAY + " 17:05", lang: "EN" });
+    DATA.AUDIT.unshift({ fact: "comms.channel_test", who: "Platform", when: TODAY, ref: channel.host });
+  }
 
   const autoDisable = () => ({ on: autoDisableOn, days: autoDisableDays });
   function setAutoDisable(on, days) { autoDisableOn = !!on; if (days) autoDisableDays = days; DATA.AUDIT.unshift({ fact: "kyc.autodisable_" + (on ? "on" : "off"), who: "Platform", when: TODAY, ref: autoDisableDays + "d" }); }
-  function __reset() { list = null; autoDisableOn = true; autoDisableDays = 7; kycEnabled = false; Object.assign(channel, { provider: "SMTP", host: "smtp.adeptio.la", port: 465, from: "noreply@adeptio.la", secure: true, status: "connected" }); }
+  function __reset() { list = null; autoDisableOn = true; autoDisableDays = 7; kycEnabled = false; Object.assign(channel, { provider: "SMTP", host: "smtp.adeptio.la", port: 465, from: "noreply@adeptio.la", secure: true, status: "connected" }); if (window.MAIL) MAIL.__reset(); }
 
   return { TODAY, all, pending, get, counts, submit, registerInstant, activate, reject, disable, sendConfirmation, getChannel, setChannel, testChannel, autoDisable, setAutoDisable, kycOn, setKyc, __reset };
 })();
@@ -5269,7 +5439,7 @@ window.SCR_OWNER = (function () {
    never sealed salary / PII / KYC content (break-glass + audited).
    ============================================================ */
 window.SCR_PLATFORM = (function () {
-  const { icon, kip, card, kpi, tile, badge, table, rowlist, rowitem, meter, segMeter, flowRail } = UI;
+  const { icon, kip, card, kpi, tile, badge, table, rowlist, rowitem, meter, segMeter, flowRail, empty } = UI;
   const band = (ic, t, s) => `<div class="intro-band"><div class="ib-ic">${icon(ic)}</div><div><div class="ib-t">${t}</div><div class="ib-s">${s}</div></div></div>`;
 
   const resMeter = (used, total, tone) => `<div class="res-meter">${meter(total ? Math.round(used / total * 100) : 0, tone)}<span class="mono">${used}/${total}</span></div>`;
@@ -5384,9 +5554,28 @@ window.SCR_PLATFORM = (function () {
     },
 
     resources() {
+      const m = window.MAIL ? MAIL.config() : { status: "—", host: "—", port: "" };
+      const breaches = window.MAIL ? MAIL.breachingTenants() : [];
+      const thr = window.MAIL ? MAIL.getThreshold() : 80;
+      // mail-server status strip — links to the full Communications config
+      const mailStrip = card("Email server", `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="badge ${m.status === "connected" ? "ok" : "warn"}">${m.status}</span>
+          <span class="mono small">${m.host}${m.port ? ":" + m.port : ""}</span>
+          <span class="small muted">·</span>
+          <span class="small">${window.MAIL && MAIL.alertOn("reslimit") ? "Resource-limit alerts on at " + thr + "% of cap" : "Resource-limit alerts off"}</span>
+        </div>`, { icon: "mail", link: "platform/web/communications", linkLabel: "Configure" });
+      // tenants at/over the alert threshold → one-tap "send limit alert"
+      const alertsCard = card("Allocation alerts", breaches.length
+        ? rowlist(breaches.map(({ t, breaches: bs }) => rowitem({
+          icon: "alert", title: t.name, sub: bs.map(b => b.label + " " + b.pct + "%").join(" · "),
+          side: `<button class="btn xs soft" data-act="mail:alert:${bs[0].metric}:${t.id}">${icon("send")} Send alert</button>`
+        })))
+        : empty("check", "All within limits", "No tenant is at " + thr + "% of a cap right now"),
+        { icon: "bell", badge: breaches.length ? `<span class="badge warn">${breaches.length} near cap</span>` : `<span class="badge ok">clear</span>` });
       return {
         title: "Resources", sub: "per-tenant: seats · messages · storage · activity",
         body: band("gauge", "Control plane · Resources", "Live meters per shop. The numbers are metadata — counts & usage, never the content behind them.") +
+          mailStrip +
           card("Per-tenant", `<div class="tablewrap"><table class="tbl">
             <thead><tr><th>Tenant</th><th>Plan</th><th>Seats (S/M/A)</th><th>LINE</th><th>WhatsApp</th><th>Storage</th><th>Status</th><th>Allocate</th></tr></thead>
             <tbody>${DATA.TENANTS.map(t => {
@@ -5403,7 +5592,8 @@ window.SCR_PLATFORM = (function () {
                 <td><button class="btn xs soft" data-go="platform/web/allocation">+ seats · msg</button></td>
               </tr>`;
           }).join("")}</tbody>
-          </table></div>`, { icon: "gauge" })
+          </table></div>`, { icon: "gauge" }) +
+          `<div style="height:16px"></div>` + alertsCard
       };
     },
 
@@ -5497,6 +5687,80 @@ window.SCR_PLATFORM = (function () {
             { cells: ["Billing", "billing@adeptio.la", `<span class="badge plain">billing</span>`, badge("pending")] }
           ]), { icon: "users" })
       };
+    },
+
+    // Communications — the single mail server every platform email goes through
+    // (activation links + system alerts). The KYC hub's email-channel reads this
+    // same config (REG delegates to MAIL).
+    communications() {
+      const cfg = MAIL.config(), cred = MAIL.credentialsSet(), thr = MAIL.getThreshold(), logs = MAIL.log();
+      const alertsOn = MAIL.CATALOG.filter(c => c.kind === "alert" && MAIL.alertOn(c.key)).length;
+      const provSel = (v) => `<select class="input sm" data-ms="provider"><option ${v === "SMTP" ? "selected" : ""}>SMTP</option><option value="ESP (HTTP API)" ${v === "ESP (HTTP API)" ? "selected" : ""}>ESP (HTTP API)</option></select>`;
+      const secSel = (v) => `<select class="input sm" data-ms="security">
+          <option value="ssl" ${v === "ssl" ? "selected" : ""}>SSL / TLS · port 465</option>
+          <option value="starttls" ${v === "starttls" ? "selected" : ""}>STARTTLS · port 587</option>
+          <option value="none" ${v === "none" ? "selected" : ""}>None (not recommended)</option>
+        </select>`;
+      const presetBtns = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          ${Object.keys(MAIL.PRESETS).map(k => `<button class="btn ghost sm" data-act="mail:preset:${k}">${icon("mail")} ${MAIL.PRESETS[k].label}</button>`).join("")}</div>`;
+
+      const serverCard = card("Mail server · SMTP", `${presetBtns}
+        <div class="grid cols-2" style="gap:0 14px">
+          <div class="field" style="margin:0 0 10px"><label>Provider</label>${provSel(cfg.provider)}</div>
+          <div class="field" style="margin:0 0 10px"><label>Security</label>${secSel(cfg.security)}</div>
+        </div>
+        <div class="grid cols-2" style="gap:0 14px">
+          <div class="field" style="margin:0 0 10px"><label>SMTP host</label><input class="input sm" data-ms="host" value="${cfg.host}"></div>
+          <div class="field" style="margin:0 0 10px"><label>Port</label><input class="input sm" data-ms="port" value="${cfg.port}"></div>
+        </div>
+        <div class="field" style="margin:0 0 10px"><label>Username · full Gmail address</label><input class="input sm" data-ms="username" value="${cfg.username}" placeholder="you@gmail.com"></div>
+        <div class="field" style="margin:0 0 10px"><label>App Password · 16 chars (held on the Worker, never stored here)</label><input class="input sm" type="password" data-ms="secret" placeholder="${cfg.hasSecret ? "•••• •••• •••• ••••  · set" : "paste the Gmail App Password"}"></div>
+        <div class="grid cols-2" style="gap:0 14px">
+          <div class="field" style="margin:0 0 10px"><label>From address</label><input class="input sm" data-ms="from" value="${cfg.from}"></div>
+          <div class="field" style="margin:0 0 10px"><label>From name</label><input class="input sm" data-ms="fromName" value="${cfg.fromName}"></div>
+        </div>
+        <div class="field" style="margin:0 0 12px"><label>Reply-to · optional</label><input class="input sm" data-ms="replyTo" value="${cfg.replyTo}" placeholder="support@adeptio.la"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn sm" data-act="mail:save">${icon("check")} Save server</button>
+          <button class="btn ghost sm" data-act="mail:test">${icon("send")} Send test</button>
+          <span class="badge ${cfg.status === "connected" ? "ok" : "warn"}">${cfg.status}</span>
+          <span class="badge ${cred ? "ok" : "warn"}">${cred ? "credentials set" : "needs App Password"}</span>
+        </div>
+        <div class="seal-note" style="margin-top:12px">${icon("lock")} <div>Consumer Gmail rewrites <b>From</b> to the signed-in address. To send as <span class="mono">@adeptio.la</span> use a Workspace relay or a verified “Send mail as” alias. The App Password lives on the Cloudflare Worker — never in the browser or the database.</div></div>`,
+        { icon: "server", badge: `<span class="badge plain">${cfg.host}:${cfg.port}</span>` });
+
+      const catRow = (c) => {
+        if (c.kind === "transactional") return rowitem({ icon: c.icon, title: c.label, sub: c.desc, side: `<span class="badge ok">always on</span>` });
+        const on = MAIL.alertOn(c.key);
+        return rowitem({ icon: c.icon, title: c.label, sub: c.desc, side: `<button class="switch" role="switch" aria-checked="${on}" data-act="mail:alert-toggle:${c.key}" aria-label="${c.label}"></button>` });
+      };
+      const thrBtns = [70, 75, 80, 90].map(p => `<button class="btn xs ${p === thr ? "" : "ghost"}" data-act="mail:threshold:${p}">${p}%</button>`).join(" ");
+      const catalogCard = card("What this server sends", `
+        <div class="small muted" style="margin-bottom:8px">Transactional mail keeps the funnel running — it can't be turned off. Alerts are optional and go to the platform operators.</div>
+        ${rowlist(MAIL.CATALOG.map(catRow))}
+        ${MAIL.alertOn("reslimit") ? `<div class="seal-note" style="margin-top:10px;align-items:center"><div style="flex:1">${icon("gauge")} Notify when a tenant reaches <b>${thr}%</b> of any cap — seats · messages · storage</div><div style="display:flex;gap:6px">${thrBtns}</div></div>` : ""}
+        <div class="seal-note ok" style="margin-top:10px">${icon("mail")} <div>Alert recipients: ${MAIL.recipients.map(r => `<span class="mono">${r}</span>`).join(", ")}</div></div>`,
+        { icon: "bell" });
+
+      const kindBadge = (k) => (k === "activation" || k === "password") ? `<span class="badge plain">transactional</span>` : k === "test" ? `<span class="badge plain">test</span>` : `<span class="badge warn">alert</span>`;
+      const logCard = card("Recent sends", table([{ h: "To" }, { h: "Subject" }, { h: "Type" }, { h: "When" }, { h: "State" }],
+        logs.slice(0, 8).map(l => ({ cells: [`<span class="small">${l.to}</span>`, l.subject, kindBadge(l.kind), `<span class="small">${l.when}</span>`, `<span class="badge ${l.state === "sent" ? "ok" : "warn"}">${l.state}</span>`] }))),
+        { icon: "history", badge: `<span class="badge plain">via ${cfg.host}</span>` });
+
+      const stat = `<div class="statline">
+        <div class="sl-it"><span class="sl-v">${cfg.status === "connected" ? "Connected" : "Setup"}</span><span class="sl-l">server</span></div>
+        <div class="sl-it"><span class="sl-v num">${cfg.port}</span><span class="sl-l">${cfg.security.toUpperCase()}</span></div>
+        <div class="sl-it"><span class="sl-v num">${alertsOn}</span><span class="sl-l">alerts on</span></div>
+        <div class="sl-it"><span class="sl-v num">${logs.length}</span><span class="sl-l">recent sends</span></div>
+      </div>`;
+
+      return {
+        title: "Communications", sub: "email server · activation links · system alerts",
+        body: band("mail", "Control plane · Communications", "The single mail server every platform email goes through — account activation links, password resets, and operational alerts like a tenant nearing its resource cap.") +
+          stat +
+          `<div class="grid cols-2">${serverCard}${catalogCard}</div>` +
+          `<div style="height:16px"></div>` + logCard
+      };
     }
   };
 
@@ -5517,7 +5781,7 @@ window.SCR_PLATFORM = (function () {
         title: "KYC", body: `${card(f.company, `<div class="kyc-review"><div class="kyc-doc"><div class="kd-head">${icon("idcard")} ID</div><div class="kyc-img">${icon("idcard")}</div></div><div class="kyc-doc"><div class="kd-head">${icon("camera")} Selfie</div><div class="kyc-img">${icon("user")}</div></div></div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn ok" style="flex:1;justify-content:center">${icon("userCheck")} Activate</button><button class="btn danger" style="flex:1;justify-content:center">${icon("x")} Reject</button></div>`)}` };
     },
     tenants() { return { title: "Tenants", body: card("", rowlist(DATA.TENANTS.map(t => rowitem({ icon: "store", title: t.name, sub: `${t.plan} · ${t.status}`, side: statusBadge(t.status) })))) }; },
-    more() { return { title: "More", body: card("", rowlist([rowitem({ icon: "gauge", title: "Resources", go: "platform/web/resources" }), rowitem({ icon: "sliders", title: "Allocation", go: "platform/web/allocation" }), rowitem({ icon: "database", title: "Database & ops", go: "platform/web/database" }), rowitem({ icon: "shield", title: "Security & audit", go: "platform/web/security" })])) }; }
+    more() { return { title: "More", body: card("", rowlist([rowitem({ icon: "gauge", title: "Resources", go: "platform/web/resources" }), rowitem({ icon: "sliders", title: "Allocation", go: "platform/web/allocation" }), rowitem({ icon: "mail", title: "Communications", go: "platform/web/communications" }), rowitem({ icon: "database", title: "Database & ops", go: "platform/web/database" }), rowitem({ icon: "shield", title: "Security & audit", go: "platform/web/security" })])) }; }
   };
 
   return { web, mobile };
@@ -5662,6 +5926,7 @@ window.PERSONAS = (function () {
       ]
     }, {
       group: "Platform", items: [
+        { id: "communications", label: "Communications", icon: "mail" },
         { id: "database", label: "Database & ops", icon: "database" },
         { id: "billing", label: "Billing & licensing", icon: "wallet" },
         { id: "security", label: "Security & audit", icon: "shield" },
@@ -6377,6 +6642,13 @@ window.AUTHV = (function () {
     if (val === "kyc:autodisable") { REG.setAutoDisable(!REG.autoDisable().on); render(); return toast("Auto-disable " + (REG.autoDisable().on ? "on" : "off")); }
     if (val === "kyc:channel-save") return kycChannelSave();
     if (val === "kyc:channel-test") { REG.testChannel(); render(); return toast("Test email queued via " + REG.getChannel().host); }
+    // ---- platform mail server + alerts (Communications) ----
+    if (val === "mail:save") return mailSave();
+    if (val === "mail:test") { MAIL.test(); render(); return toast("Test email queued via " + MAIL.config().host); }
+    if (val.startsWith("mail:preset:")) { MAIL.applyPreset(val.split(":")[2]); render(); return toast("Preset applied · " + MAIL.config().host + ":" + MAIL.config().port); }
+    if (val.startsWith("mail:alert-toggle:")) { const k = val.slice("mail:alert-toggle:".length), on = MAIL.toggleAlert(k); render(); return toast("Alert " + (on ? "enabled" : "disabled") + " · " + k); }
+    if (val.startsWith("mail:threshold:")) { MAIL.setThreshold(val.split(":")[2]); render(); return toast("Resource-limit alerts at " + MAIL.getThreshold() + "% of cap"); }
+    if (val.startsWith("mail:alert:")) { const p = val.split(":"); const r = MAIL.alertResource(p[3], p[2]); render(); return toast(r.ok ? "Limit alert sent · " + r.subject : r.err, r.ok ? "" : "warn"); }
     if (val.startsWith("profile:")) return profileAct(val);
 
     /* ---- calendar · leave ---- */
@@ -6511,6 +6783,11 @@ window.AUTHV = (function () {
     const g = (k) => { const el = document.querySelector(`[data-ch="${k}"]`); return el ? el.value.trim() : ""; };
     REG.setChannel({ provider: g("provider") || "SMTP", host: g("host"), port: parseInt(g("port"), 10) || 465, from: g("from") });
     render(); toast("Email channel saved · " + REG.getChannel().status);
+  }
+  function mailSave() {
+    const g = (k) => { const el = document.querySelector(`[data-ms="${k}"]`); return el ? el.value.trim() : ""; };
+    MAIL.save({ provider: g("provider"), host: g("host"), port: g("port"), security: g("security"), username: g("username"), from: g("from"), fromName: g("fromName"), replyTo: g("replyTo"), secret: g("secret") });
+    render(); toast("Mail server saved · " + MAIL.config().status);
   }
   function paySaveDraft() {
     const tid = DATA.state.tenantId, by = {};
