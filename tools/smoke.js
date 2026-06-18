@@ -280,7 +280,7 @@ ok(/Account created/.test(AUTHV.registerPage(true)) && /username is your email/.
 REG.__reset();
 const inst = REG.registerInstant({ company: "Quick Shop", owner: "Q Owner", email: "q@quick.la", phone: "+856", lang: "lo", entity: "sole", biz: "services" });
 ok(inst.status === "active" && inst.noKyc === true && typeof inst.tempPwd === "string" && inst.tempPwd.length >= 8, "no-KYC register → instant active + random temp password");
-ok(DATA.OUTBOX.some(o => o.to === "q@quick.la" && /access link|username/i.test(o.tpl)) && DATA.AUDIT.some(a => a.fact === "registration.instant"), "no-KYC register emails the access link (username = email)");
+ok(DATA.OUTBOX.some(o => o.to.indexOf("q@quick.la") > -1 && /access link|password/i.test(o.tpl)) && DATA.AUDIT.some(a => a.fact === "registration.instant"), "no-KYC register emails the set-password access link (username = email)");
 // KYC master feature flag — default OFF, gates the platform nav + overview
 REG.__reset();
 ok(REG.kycOn() === false, "KYC feature defaults OFF");
@@ -330,6 +330,64 @@ ok(/What this server sends/.test(commBody) && /mail:alert-toggle:/.test(commBody
 const resBody = SCR_PLATFORM.web.resources().body;
 ok(/Email server/.test(resBody) && /platform\/web\/communications/.test(resBody) && /Allocation alerts/.test(resBody), "Resources page: mail-status strip + allocation-alerts card");
 MAIL.__reset(); REG.__reset();
+
+/* ---- activation flow — token · set-password · real account + tenant ---- */
+section("Activation flow — link · set-password · account creation");
+REG.__reset(); MAIL.__reset();
+const acctN0 = AUTH.ACCOUNTS.length, tenN0 = DATA.TENANTS.length;
+REG.setKyc(false);
+const ri = REG.registerInstant({ company: "Sunrise Cafe", owner: "Noy Vientiane", email: "noy@sunrise.la", phone: "+856 20 1", lang: "lo", entity: "sole", biz: "services" });
+ok(!!ri.token && /^#\/activate\//.test(REG.linkOf(ri.token)), "registerInstant issues a token + #/activate link");
+ok(REG.tokenInfo(ri.token).state === "valid", "fresh token is valid");
+ok(!!REG.lastIssued() && REG.lastIssued().token === ri.token, "lastIssued tracks the newest link");
+ok(DATA.OUTBOX.some(o => o.to.indexOf("noy@sunrise.la") > -1) && MAIL.log().some(l => l.kind === "activation"), "activation email routed through MAIL (outbox + Recent sends)");
+ok(MAIL.log()[0].state === "queued", "send is queued until the App Password is entered");
+MAIL.save({ secret: "fihe ibne ewnz nkyf" });
+ok(MAIL.ready() && MAIL.credentialsSet() && MAIL.secretLen() === 16, "entering the 16-char App Password makes the server ready");
+const sp = REG.setPassword(ri.token, "shoppw1");
+ok(sp.ok && sp.persona === "owner" && sp.email === "noy@sunrise.la", "setPassword completes → owner account");
+ok(AUTH.ACCOUNTS.length === acctN0 + 1 && !!AUTH.find("noy@sunrise.la"), "a real sign-in account is created");
+ok(AUTH.signIn("noy@sunrise.la", "shoppw1").ok, "the new owner can sign in with the password they set");
+ok(!AUTH.signIn("noy@sunrise.la", "wrong").ok, "wrong password rejected for the new account");
+ok(DATA.TENANTS.length === tenN0 + 1 && DATA.byId(sp.tenant) && DATA.byId(sp.tenant).status === "active", "a fresh active tenant is provisioned");
+ok(REG.tokenInfo(ri.token).state === "used" && !REG.setPassword(ri.token, "again1").ok, "token is single-use (can't be replayed)");
+ok(DATA.AUDIT.some(a => a.fact === "auth.account_created") && DATA.AUDIT.some(a => a.fact === "tenant.created"), "account + tenant creation audited");
+// brand-new tenant renders every Owner web screen cleanly (empty books, no NaN)
+DATA.setTenant(sp.tenant);
+PERSONAS.owner.sections.forEach(sec => (sec.solo ? [sec.id] : sec.sub.map(it => it.id)).forEach(id => {
+  try { const d = SCR_OWNER.web[id](); const b = (d && d.body) || ""; ok(d && d.title && b.length > 40 && !/undefined|NaN|\[object/.test(b), "new tenant renders owner screen clean: " + id); }
+  catch (e) { ok(false, "new tenant owner screen ERROR " + id + ": " + e.message); }
+}));
+DATA.setTenant("phoungern");
+// expired + invalid token states
+const ri2 = REG.registerInstant({ company: "Old Shop", owner: "X Y", email: "x@old.la", phone: "+856", lang: "lo", entity: "sole", biz: "services" });
+REG.tokenInfo(ri2.token).rec.expires = "2026-06-10"; // force past REG.TODAY (2026-06-15)
+ok(REG.tokenInfo(ri2.token).state === "expired" && !REG.setPassword(ri2.token, "nope12").ok, "expired token rejected");
+ok(REG.tokenInfo("not-a-real-token").state === "invalid", "unknown token = invalid");
+// KYC-on path: activate issues the link too
+REG.__reset(); REG.setKyc(true);
+const pr0 = REG.pending()[0], obK = DATA.OUTBOX.length;
+REG.activate(pr0.id);
+ok(REG.get(pr0.id).status === "active" && !!REG.get(pr0.id).token, "KYC activate provisions + issues a set-password token");
+ok(DATA.OUTBOX.length === obK + 1, "KYC activate emails exactly one set-password link");
+ok(REG.tokenInfo(REG.get(pr0.id).token).state === "valid", "KYC-issued token is valid + openable");
+// MAIL default: App Password NOT pre-stored + the admin overview prompt
+REG.__reset(); MAIL.__reset();
+ok(MAIL.credentialsSet() === false && MAIL.config().hasSecret === false, "App Password is NOT pre-stored (entered at runtime)");
+ok(MAIL.config().host === "smtp.gmail.com" && MAIL.config().port === 465 && MAIL.config().from === "adeptio.stage@gmail.com" && MAIL.config().fromName === "Adeptio HR", "SMTP pre-filled with the attached Gmail details");
+const ovr = SCR_PLATFORM.web.overview().body;
+ok(/Enter your Gmail App Password/.test(ovr) && /data-msq/.test(ovr) && /data-act="mail:quicksecret"/.test(ovr), "admin overview prompts for the App Password + inline field until set");
+MAIL.save({ secret: "fihe ibne ewnz nkyf" });
+ok(!/Enter your Gmail App Password/.test(SCR_PLATFORM.web.overview().body), "prompt disappears once the App Password is entered");
+// activate page renders all states
+MAIL.__reset(); REG.__reset(); REG.setKyc(false);
+const rip = REG.registerInstant({ company: "Page Test", owner: "P T", email: "p@t.la", phone: "+856", lang: "lo", entity: "sole", biz: "services" });
+const apg = AUTHV.activatePage(rip.token);
+ok(/Set your password/.test(apg) && /data-setpw="pwd"/.test(apg) && /data-setpw="pwd2"/.test(apg) && /activate:setpw:/.test(apg) && !/undefined|NaN|\[object/.test(apg), "activate page: set-password form wired + clean");
+ok(/Invalid link/.test(AUTHV.activatePage("zzz")) && !/Set your password/.test(AUTHV.activatePage("zzz")), "invalid token → Invalid link state");
+REG.setPassword(rip.token, "donepw1");
+ok(/Already activated/.test(AUTHV.activatePage(rip.token)), "used token → Already activated state");
+REG.__reset(); MAIL.__reset(); DATA.setTenant("phoungern");
 
 /* ---- people profile — PROFILE engine ---- */
 section("People profile — PROFILE engine");
