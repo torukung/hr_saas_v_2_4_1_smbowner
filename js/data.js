@@ -226,6 +226,35 @@ window.DATA = (function () {
   function activeTenants() { return TENANTS.filter(t => t.status === "active"); }
   function pendingKyc() { return (window.REG && REG.pending) ? REG.pending() : REGISTRATIONS.filter(r => r.status === "pending"); }
 
+  /* ---------------- new tenant from an activated registration ----------------
+     Activation creates a real, live shop: a unique tenant id, the owner seeded
+     as the first person, and valid (zeroed) seats/quota/storage/books so every
+     Owner screen renders cleanly from day one. Shared-schema multitenancy — a
+     new tenant is rows, not servers. */
+  function slugId(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 16); }
+  function createTenant(opts) {
+    opts = opts || {};
+    let id = slugId(opts.company || opts.id) || "shop";
+    const base = id; let n = 2; while (byId(id)) { id = base + n; n++; }
+    const short = ((opts.company || id).replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase()) || "SH";
+    const ownerName = opts.owner || "Owner";
+    const t = {
+      id, name: opts.company || ("Shop " + id), short,
+      entity: opts.entity || "sole", biz: opts.biz || "services", locale: opts.lang === "en" ? "en" : "lo",
+      status: "active", plan: "Free", level: "L0", headcount: 1, since: opts.since || "2026-06-18",
+      sites: [],
+      seats: { staff: { used: 0, limit: 10 }, manager: { used: 0, limit: 3 }, admin: { used: 1, limit: 1 } },
+      quota: { line: { used: 0, limit: 50 }, whatsapp: { used: 0, limit: 50 } },
+      storage: { used: 0, limit: 2 }, owner: ownerName,
+      month: { revenue: 0, otherExp: 0, channelFee: 0 }, isNew: true
+    };
+    TENANTS.push(t);
+    PEOPLE[id] = [P(short + "-001", ownerName, "Owner / Sys-Admin", "Management", 3500000, "present", { access: "owner", team: "Management" })];
+    LEDGER[id] = []; RECUR_EXPENSES[id] = [];
+    AUDIT.unshift({ fact: "tenant.created", who: "system", when: "2026-06-18", ref: id + " · " + t.name });
+    return id;
+  }
+
   // platform totals
   function platformStats() {
     const act = activeTenants();
@@ -239,6 +268,6 @@ window.DATA = (function () {
   return {
     TENANTS, PEOPLE, SS, PIT_BRACKETS, PAYSLIP, PAYRUNS, LEDGER, ROLLUP, TAX_PERIODS,
     ATT_TODAY, LEAVE_REQS, SHIFTS, RECUR_EXPENSES, REGISTRATIONS, OUTBOX, AUDIT, TEAMS,
-    state, byId, cur, setTenant, people, me, activeTenants, pendingKyc, platformStats, teamsFor
+    state, byId, cur, setTenant, people, me, activeTenants, pendingKyc, platformStats, teamsFor, createTenant
   };
 })();

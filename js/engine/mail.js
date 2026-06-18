@@ -19,6 +19,11 @@ window.MAIL = (function () {
   const TODAY = "2026-06-17";
 
   /* ---------------- the one SMTP server every email goes through ---------------- */
+  // Pre-filled with the staging Gmail SMTP details. The App Password is the ONE
+  // thing the operator must enter at runtime — it is held in memory for the session
+  // only and is NEVER written to any file, the bundle, or the database (for a real
+  // send it lives as a Cloudflare Worker secret). hasSecret starts FALSE so the
+  // administrator's first page prompts for it until it's entered.
   const DEFAULT = {
     provider: "SMTP",                       // SMTP | ESP (HTTP API)
     host: "smtp.gmail.com",
@@ -28,15 +33,18 @@ window.MAIL = (function () {
     from: "adeptio.stage@gmail.com",        // consumer Gmail forces From = the authenticated address
     fromName: "Adeptio HR",
     replyTo: "",
-    hasSecret: true                         // App Password held server-side (never stored here)
+    hasSecret: false                        // App Password not entered yet → prompt for it
   };
   let cfg = Object.assign({}, DEFAULT);
+  let secret = "";                          // runtime-only; never serialised to a file/bundle/DB
 
   // status is DERIVED, never stored stale — keeps back-compat with the old REG channel
   // (which was "connected" once host + from were present).
   function status() { return (cfg.host && cfg.from) ? "connected" : "not configured"; }
+  // ready to actually send only once the App Password is in (transport + auth both present)
   function credentialsSet() { return !!(cfg.username && cfg.hasSecret); }
-  function config() { return Object.assign({}, cfg, { status: status() }); }
+  function ready() { return status() === "connected" && credentialsSet(); }
+  function config() { return Object.assign({}, cfg, { status: status(), ready: ready() }); }
   // the shape the KYC card / REG.getChannel() expect
   function asChannel() { return { provider: cfg.provider, host: cfg.host, port: cfg.port, from: cfg.from, secure: cfg.security !== "none", status: status() }; }
 
@@ -46,11 +54,17 @@ window.MAIL = (function () {
       if (obj[k] !== undefined && String(obj[k]).trim() !== "") cfg[k] = String(obj[k]).trim();
     });
     if (obj.port !== undefined && String(obj.port).trim() !== "") cfg.port = parseInt(obj.port, 10) || cfg.port;
-    if (obj.secret) cfg.hasSecret = true;                 // a secret was entered → held server-side
+    if (obj.secret && String(obj.secret).trim() !== "") {  // App Password entered → held in memory only
+      secret = String(obj.secret).replace(/\s+/g, "");      // Gmail shows the 16-char key in 4 groups; strip the display spaces
+      cfg.hasSecret = true;
+      DATA.AUDIT.unshift({ fact: "comms.secret_set", who: "Platform", when: TODAY, ref: "Gmail App Password stored in session memory (not persisted)" });
+    }
     if (obj.hasSecret !== undefined) cfg.hasSecret = !!obj.hasSecret;
     DATA.AUDIT.unshift({ fact: "comms.server_set", who: "Platform", when: TODAY, ref: cfg.provider + " · " + cfg.host + ":" + cfg.port });
     return config();
   }
+  // length only — never expose the secret itself (lets the UI show "16-char key set")
+  function secretLen() { return secret.length; }
 
   /* ---------------- Gmail / Workspace one-tap presets ---------------- */
   const PRESETS = {
@@ -101,7 +115,8 @@ window.MAIL = (function () {
   let log = SEED.slice();
   const logList = () => log.slice();
   function record(to, subject, kind) {
-    const rec = { to, subject, kind, when: TODAY + " 17:00", via: cfg.host, state: status() === "connected" ? "sent" : "queued" };
+    // honest state: we can only mark "sent" once the App Password is in; otherwise it waits
+    const rec = { to, subject, kind, when: TODAY + " 17:00", via: cfg.host, state: ready() ? "sent" : "queued" };
     log.unshift(rec);
     DATA.OUTBOX.unshift({ to, ch: "email", tpl: subject, when: rec.when, lang: "EN·ລາວ" });
     return rec;
@@ -144,6 +159,7 @@ window.MAIL = (function () {
 
   function __reset() {
     cfg = Object.assign({}, DEFAULT);
+    secret = "";
     threshold = 75;
     CATALOG.filter(c => c.kind === "alert").forEach(c => alerts[c.key] = c.def);
     log = SEED.slice();
@@ -151,7 +167,7 @@ window.MAIL = (function () {
 
   return {
     TODAY, config, asChannel, save, applyPreset, PRESETS, CATALOG,
-    alertOn, toggleAlert, getThreshold, setThreshold, credentialsSet, recipients,
+    alertOn, toggleAlert, getThreshold, setThreshold, credentialsSet, ready, secretLen, recipients,
     log: logList, send, test, record, tenantBreaches, breachingTenants, alertResource, status, __reset
   };
 })();

@@ -45,5 +45,21 @@ window.AUTH = (function () {
   const defaultAccount = (persona) => accountsFor(persona).slice(-1)[0] || accountsFor(persona)[0];
   const stats = () => ({ accounts: ACCOUNTS.length, active: ACCOUNTS.length });
 
-  return { ACCOUNTS, portalOn, setPortal, session, signIn, signOut, primaryScope, accountsFor, defaultAccount, stats, find };
+  // Create (or update) a real, sign-in-able account — used when a registration is
+  // activated and its owner sets a password through the activation link. The new
+  // account then appears in the Owner sign-in frame and authenticates like any other.
+  function addAccount(a) {
+    if (!a || !a.email || !a.pwd) return null;
+    const email = String(a.email).trim().toLowerCase();
+    const rec = {
+      email, pwd: a.pwd, name: a.name || email, persona: a.persona || "owner",
+      scopes: (a.scopes && a.scopes.slice()) || ["owner"], tenant: a.tenant || null,
+      role: a.role || "Owner", created: true
+    };
+    const i = ACCOUNTS.findIndex(x => x.email.toLowerCase() === email);
+    if (i >= 0) ACCOUNTS[i] = Object.assign(ACCOUNTS[i], rec); else ACCOUNTS.push(rec);
+    return rec;
+  }
+
+  return { ACCOUNTS, portalOn, setPortal, session, signIn, signOut, primaryScope, accountsFor, defaultAccount, stats, find, addAccount };
 })();

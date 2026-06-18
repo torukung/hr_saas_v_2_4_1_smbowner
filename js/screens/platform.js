@@ -26,9 +26,24 @@ window.SCR_PLATFORM = (function () {
             ${segMeter("Workers / day", 12, 100, { unit: "k" })}
             ${segMeter("Storage (GB)", 0.6, 10, { unit: "GB" })}
           </div><div class="seal-note ok" style="margin-top:12px">${icon("check")} Shared-schema multi-tenancy — a new tenant is rows, not servers. Free-tier headroom is wide.</div>`, { icon: "pulse" });
+      // First thing the operator sees until the Gmail App Password is entered: a
+      // persistent prompt with an inline field (held in memory only, never written to a file).
+      const needSecret = window.MAIL && !MAIL.credentialsSet();
+      const secretAlert = needSecret ? `<div class="kyc-master off" style="margin-bottom:16px;border-color:#e7c9a6;background:#fdf6ec">
+        <span class="km-ic" style="background:#f4e3c8;color:#b87514">${icon("alert")}</span>
+        <div class="km-main">
+          <div class="km-t">Enter your Gmail App Password <span class="badge bad">not set</span></div>
+          <div class="km-s">The mail server is pre-configured (<span class="mono">smtp.gmail.com · 465 · adeptio.stage@gmail.com</span>) but can't actually send activation or password emails until you paste its 16-character Gmail App Password. It's held in memory for this session only — never saved to a file.</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:11px">
+            <input class="input sm" type="password" data-msq autocomplete="off" placeholder="paste the 16-char App Password" style="max-width:280px">
+            <button class="btn sm" data-act="mail:quicksecret">${icon("check")} Save App Password</button>
+            <button class="btn ghost sm" data-go="platform/web/communications">${icon("mail")} Open Communications</button>
+          </div>
+        </div>
+      </div>` : "";
       return {
         title: "Platform overview", sub: "Tenants live · platform load · alerts",
-        body: master + `
+        body: secretAlert + master + `
         <div class="tilegrid" style="margin-bottom:16px">
           ${tile({ label: "Tenants live", icon: "store", value: st.tenants, sub: `of ${st.total} registered`, accent: true })}
           ${kyc ? tile({ label: "Pending KYC", icon: "idcard", value: st.pending, sub: `<span class="badge warn">needs review</span>`, go: "platform/web/registrations" }) : tile({ label: "Storage", icon: "box", value: "0.6", sub: "GB · shared" })}
@@ -49,7 +64,12 @@ window.SCR_PLATFORM = (function () {
 
     registrations() {
       const pend = REG.pending(), c = REG.counts(), ch = REG.getChannel(), ad = REG.autoDisable(), focus = pend.find(r => r.match === "strong") || pend[0];
+      const li = REG.lastIssued && REG.lastIssued(), liOpen = li && REG.tokenInfo(li.token).state === "valid";
+      const liCard = liOpen ? `<div class="seal-note ok" style="margin:0 0 16px;align-items:center">${icon("mail")}<div style="flex:1"><b>Activation link sent</b> — emailed to <span class="mono">${li.email}</span> for ${li.company}. <span class="small muted">Demo: open it to set the password and finish creating the account.</span></div><button class="btn sm" data-go="activate/${li.token}">${icon("send")} Open set-password page</button></div>` : "";
       const stB = (s) => s === "active" ? badge("active") : s === "pending" ? `<span class="badge warn">pending</span>` : s === "disabled" ? `<span class="badge bad">disabled</span>` : `<span class="badge bad">${s}</span>`;
+      const rowAction = (r) => r.status === "pending"
+        ? `<button class="btn xs soft" data-act="kyc:activate:${r.id}">Activate</button> <button class="btn xs ghost" data-act="kyc:disable:${r.id}">Disable</button>`
+        : (r.token && REG.tokenInfo(r.token).state === "valid" ? `<button class="btn xs soft" data-go="activate/${r.token}">Open link</button>` : "");
       const sw = (on) => `<button class="switch" aria-checked="${on}" role="switch" data-act="kyc:autodisable"></button>`;
       return {
         title: "KYC & registration", sub: "one hub — register queue · ID↔selfie review · email channel · auto-disable",
@@ -60,6 +80,7 @@ window.SCR_PLATFORM = (function () {
             <div class="sl-it"><span class="sl-v num">${c.disabled}</span><span class="sl-l">auto-disabled</span></div>
             <div class="sl-it"><span class="sl-v num">${c.total}</span><span class="sl-l">total</span></div>
           </div>
+          ${liCard}
           <div class="grid cols-2">
             ${card("Email channel — password delivery & confirmation", `
               <div style="display:flex;flex-direction:column;gap:10px">
@@ -97,8 +118,7 @@ window.SCR_PLATFORM = (function () {
             { icon: "idcard", badge: `<span class="badge warn">${c.pending} pending</span>` }) : card("KYC queue", empty("check", "Queue clear", "No pending registrations"), { icon: "idcard" })) +
           `<div style="height:16px"></div>` +
           card("All registrations", table([{ h: "Ref" }, { h: "Company" }, { h: "Owner" }, { h: "Submitted" }, { h: "Deadline" }, { h: "Status" }, { h: "" }], REG.all().map(r => ({
-            cells: [`<span class="idtag">${r.id}</span>`, r.company, r.owner, r.submitted, `<span class="small">${r.deadline || "—"}</span>`, stB(r.status),
-            r.status === "pending" ? `<button class="btn xs soft" data-act="kyc:activate:${r.id}">Activate</button> <button class="btn xs ghost" data-act="kyc:disable:${r.id}">Disable</button>` : ""]
+            cells: [`<span class="idtag">${r.id}</span>`, r.company, r.owner, r.submitted, `<span class="small">${r.deadline || "—"}</span>`, stB(r.status), rowAction(r)]
           }))), { icon: "list" })
       };
     },
@@ -334,8 +354,10 @@ window.SCR_PLATFORM = (function () {
   const mobile = {
     overview() {
       const st = DATA.platformStats();
+      const needSecret = window.MAIL && !MAIL.credentialsSet();
+      const secretAlert = needSecret ? `<div class="seal-note" style="margin:0 0 12px;border-color:#e7c9a6;background:#fdf6ec;color:#8a5a16">${icon("alert")}<div style="flex:1"><b>Enter your Gmail App Password</b> — emails can't send until it's set.<div style="display:flex;gap:6px;margin-top:8px"><input class="input sm" type="password" data-msq placeholder="16-char App Password" style="flex:1"><button class="btn sm" data-act="mail:quicksecret">${icon("check")} Save</button></div></div></div>` : "";
       return {
-        title: "Platform", body: `
+        title: "Platform", body: secretAlert + `
         ${tile({ label: "Tenants live", icon: "store", value: st.tenants, sub: `of ${st.total}`, accent: true })}
         ${tile({ label: "Pending KYC", icon: "idcard", value: st.pending, sub: "needs review" })}
         ${card("KYC queue", rowlist(DATA.pendingKyc().map(r => rowitem({ icon: "idcard", title: r.company, sub: r.owner, side: `<button class="btn xs soft" data-go="platform/mobile/registrations">Review</button>` }))))}`

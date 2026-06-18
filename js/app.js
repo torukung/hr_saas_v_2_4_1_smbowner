@@ -29,6 +29,7 @@
     const h = location.hash.replace(/^#\/?/, "");
     if (h === "login") return (AUTH.portalOn() && AUTH.session()) ? landingRoute(AUTH.session()) : { view: "login" };
     if (h === "register" || h === "register/done") return { view: "register", done: h === "register/done" }; // public — bypasses the wall (KYC on = full flow · off = instant no-KYC)
+    if (h === "activate" || h.indexOf("activate/") === 0) return { view: "activate", token: decodeURIComponent(h.split("/")[1] || "") }; // public set-password link — bypasses the wall
     if (!h || h === "launcher") return { view: "launcher" };
     // wall: sign-in mode + no session → login (focus the entered persona)
     if (AUTH.portalOn() && !AUTH.session()) {
@@ -308,10 +309,11 @@
   function render() {
     const r = route();
     document.body.dataset.persona = r.view === "app" ? r.persona : (r.view === "login" ? AUTHV.state.focus : "");
-    document.body.dataset.portal = (r.view === "login" || r.view === "register") ? "1" : "";
+    document.body.dataset.portal = (r.view === "login" || r.view === "register" || r.view === "activate") ? "1" : "";
     let html;
     if (r.view === "login") html = AUTHV.portal();
     else if (r.view === "register") html = AUTHV.registerPage(r.done);
+    else if (r.view === "activate") html = AUTHV.activatePage(r.token);
     else if (r.view === "launcher") html = launcher();
     else if (r.view === "app") html = r.device === "mobile" ? mobileShell(r) : (PERSONAS[r.persona].twoTier ? twoTierShell(r) : railShell(r));
     // day-summary popup overlays the owner web console wherever the team grid lives (dashboard or full calendar)
@@ -432,6 +434,8 @@
     if (val === "pay:commit") return payCommit();
     // ---- registration + KYC ----
     if (val === "register:submit") return registerSubmit();
+    if (val.startsWith("activate:setpw:")) return activateSetPw(val.slice("activate:setpw:".length));
+    if (val === "mail:quicksecret") return mailQuickSecret();
     if (val.startsWith("kyc:feature:")) { REG.setKyc(val.split(":")[2] === "on"); render(); return toast("KYC & registration " + (REG.kycOn() ? "enabled" : "disabled · related menus hidden") + " platform-wide"); }
     if (val.startsWith("kyc:activate:")) { REG.activate(val.split(":")[2]); render(); return toast("Activated — confirmation email sent via " + REG.getChannel().provider); }
     if (val.startsWith("kyc:reject:")) { REG.reject(val.split(":")[2], "not verified"); render(); return toast("Registration rejected (reason logged)"); }
@@ -584,7 +588,26 @@
   function mailSave() {
     const g = (k) => { const el = document.querySelector(`[data-ms="${k}"]`); return el ? el.value.trim() : ""; };
     MAIL.save({ provider: g("provider"), host: g("host"), port: g("port"), security: g("security"), username: g("username"), from: g("from"), fromName: g("fromName"), replyTo: g("replyTo"), secret: g("secret") });
-    render(); toast("Mail server saved · " + MAIL.config().status);
+    render(); toast(MAIL.config().ready ? "Mail server saved · ready to send ✓" : "Mail server saved · " + MAIL.config().status);
+  }
+  // admin first-page (or Communications) inline App Password entry — held in memory only
+  function mailQuickSecret() {
+    const el = document.querySelector("[data-msq]"), v = el ? el.value.trim() : "";
+    if (!v) return toast("Paste the 16-character Gmail App Password first.", "warn");
+    MAIL.save({ secret: v });
+    render(); toast("Gmail App Password saved (in memory) — mail server ready ✓");
+  }
+  // activation link → set password → create the account, then sign straight in to prove it works
+  function activateSetPw(token) {
+    const pwd = (document.querySelector('[data-setpw="pwd"]') || {}).value || "";
+    const pwd2 = (document.querySelector('[data-setpw="pwd2"]') || {}).value || "";
+    if (!pwd || pwd.length < 6) return toast("Choose a password of at least 6 characters.", "warn");
+    if (pwd !== pwd2) return toast("The two passwords don't match.", "warn");
+    const res = REG.setPassword(token, pwd);
+    if (!res.ok) return toast(res.err, "warn");
+    const si = AUTH.signIn(res.email, pwd);
+    if (si.ok) { AUTHV.state.err = ""; toast("Welcome, " + String(res.name || "").split(" ")[0] + " — your account is ready."); return go(res.persona + "/web/" + defScreen(res.persona)); }
+    AUTHV.state.focus = res.persona; toast("Account created — sign in with " + res.email); return go("login");
   }
   function paySaveDraft() {
     const tid = DATA.state.tenantId, by = {};

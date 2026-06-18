@@ -185,7 +185,12 @@ window.AUTHV = (function () {
           <h2 style="font-size:27px;font-weight:800;letter-spacing:-.02em;margin:0">${kyc ? "Registration submitted" : "Account created"}</h2>
           <p style="font-size:15px;color:#6b7088;line-height:1.7;margin:12px 0 0">${kyc
         ? `Your shop is registered and <b style="color:#1b1e34">pending review</b>. A Platform Administrator verifies your ID + selfie, activates you, then emails a <b style="color:#1b1e34">72-hour link to set your password</b> — sent via <span style="font-family:ui-monospace,monospace;color:#3a4db0">${UI.esc(ch.provider)}</span>. Nothing is operational until you're activated.`
-        : `Your account is <b style="color:#1b1e34">live</b>. We've emailed your <b style="color:#1b1e34">access link</b> — your <b style="color:#1b1e34">username is your email</b>, with a temporary password to change on first sign-in. Sent via <span style="font-family:ui-monospace,monospace;color:#3a4db0">${UI.esc(ch.provider)}</span>.`}</p>
+        : `Your shop is registered. We've emailed your <b style="color:#1b1e34">activation link</b> — your <b style="color:#1b1e34">username is your email</b>. Open the link to set your password and finish creating your account. Sent via <span style="font-family:ui-monospace,monospace;color:#3a4db0">${UI.esc(ch.provider)}</span>.`}</p>
+          ${(!kyc && window.REG && REG.lastIssued && REG.lastIssued()) ? `<div style="background:#eef0fb;border:1px solid #dadcf3;border-radius:14px;padding:16px 18px;margin-top:24px;text-align:left">
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#3a4db0;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg> Demo · your inbox</div>
+            <div style="font-size:13.5px;color:#52567a;line-height:1.5;margin-bottom:12px">In a live deployment this link arrives by email. For the demo, open it here:</div>
+            <button class="reg-cta" style="box-shadow:none;font-size:14.5px;padding:13px" data-go="activate/${REG.lastIssued().token}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg> Open my activation email</button>
+          </div>` : ""}
           <div style="display:flex;gap:10px;justify-content:center;margin-top:26px">
             <button class="reg-link" data-go="launcher"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Back to start</button>
             <button class="reg-cta" style="width:auto;padding:11px 20px;font-size:14.5px;box-shadow:none" data-go="register">Register another shop</button>
@@ -242,5 +247,54 @@ window.AUTHV = (function () {
     </main></div>`;
   }
 
-  return { state, portal, landingSection, seedStrip, registerPage, dropInner };
+  /* activation / set-password landing — where the email's #/activate/<token> link lands.
+     Completes account creation: the owner picks a password → real login account + live shop. */
+  function activatePage(token) {
+    const info = window.REG ? REG.tokenInfo(token) : { state: "invalid", rec: null };
+    const rec = info.rec;
+    const css = `<style>
+      .act-root *{box-sizing:border-box}
+      .act-root{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:auto;z-index:50;background:#f6f4ef;color:#1b1e34;font-family:'Plus Jakarta Sans','Manrope',system-ui,sans-serif;padding:40px 20px}
+      .act-card{width:100%;max-width:470px;background:#fff;border:1px solid #ececf3;border-radius:22px;padding:38px 36px;box-shadow:0 30px 70px -40px rgba(40,46,90,.5);animation:regIn .5s ease both}
+      .act-brand{display:flex;align-items:center;gap:12px;margin-bottom:26px}
+      .act-mk{width:44px;height:44px;border-radius:13px;background:linear-gradient(160deg,#384aa6,#3a4db0);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:21px}
+      .act-in{width:100%;padding:14px 16px;font-size:15px;font-family:inherit;border:1px solid #e3e4ef;border-radius:13px;background:#fff;color:#1b1e34;transition:.18s}
+      .act-in:focus{outline:none;border-color:#3a4db0;box-shadow:0 0 0 4px rgba(58,77,176,.12)}
+      .act-in[readonly]{background:#f5f5fa;color:#6b7088}
+      .act-lab{display:block;font-size:13.5px;font-weight:600;color:#2c3047;margin:0 0 7px}
+      .act-cta{width:100%;border:none;cursor:pointer;background:linear-gradient(180deg,#43539e,#3a4db0);color:#fff;font-family:inherit;font-size:16px;font-weight:700;padding:16px;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 12px 28px -10px rgba(58,77,176,.6);transition:.18s;margin-top:6px}
+      .act-cta:hover{transform:translateY(-2px)}
+      .act-link{display:inline-flex;align-items:center;gap:6px;color:#3a4db0;font-weight:600;font-size:14px;cursor:pointer;background:none;border:1px solid #e3e4ef;padding:10px 16px;border-radius:11px}
+      .act-seal{display:flex;gap:9px;align-items:flex-start;background:#f3f4fd;border:1px solid #e3e4ef;color:#52567a;border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.5;margin-top:18px}
+      @keyframes regIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    </style>`;
+    const brand = `<div class="act-brand"><span class="act-mk">A</span><div><div style="font-weight:800;font-size:17px;letter-spacing:-.02em">Adeptio <span style="font-weight:500;opacity:.7">Owner Edition</span></div><div style="font-size:12.5px;color:#8a8fa3">Account activation</div></div></div>`;
+    const lockIc = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a7fa3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+
+    if (info.state !== "valid") {
+      const msg = info.state === "used"
+        ? { ic: "#2f9e5e", t: "Already activated", p: "This link has already been used. Your account is set up — head to sign-in.", b: `<button class="act-cta" style="max-width:200px;margin:22px auto 0" data-go="login">${icon("key")} Go to sign-in</button>` }
+        : info.state === "expired"
+          ? { ic: "#c9772f", t: "Link expired", p: "This 72-hour activation link has expired. Register again, or ask the Platform operator to re-send your link.", b: `<button class="act-link" style="margin:22px auto 0" data-go="register">Register again</button>` }
+          : { ic: "#c0392b", t: "Invalid link", p: "We couldn't find that activation link. Check the full URL from your email, or start again.", b: `<button class="act-link" style="margin:22px auto 0" data-go="launcher">Back to start</button>` };
+      return `${css}<div class="act-root"><div class="act-card" style="text-align:center">${brand}
+        <div style="width:64px;height:64px;border-radius:50%;background:#f3f4fd;display:flex;align-items:center;justify-content:center;margin:6px auto 16px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="${msg.ic}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg></div>
+        <h2 style="font-size:23px;font-weight:800;margin:0">${msg.t}</h2>
+        <p style="font-size:14.5px;color:#6b7088;line-height:1.65;margin:10px 0 0">${msg.p}</p>
+        <div style="display:flex;justify-content:center">${msg.b}</div></div></div>`;
+    }
+
+    const ch = window.MAIL ? MAIL.config() : { from: "adeptio.stage@gmail.com" };
+    return `${css}<div class="act-root"><div class="act-card">${brand}
+      <h2 style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0">Set your password</h2>
+      <p style="font-size:14.5px;color:#6b7088;line-height:1.6;margin:9px 0 24px">Welcome, <b style="color:#1b1e34">${UI.esc(rec.name || "there")}</b> — activate <b style="color:#1b1e34">${UI.esc(rec.company || "your shop")}</b>. Your username is your email; pick a password to finish creating your account.</p>
+      <div style="margin-bottom:16px"><label class="act-lab">Email · your username</label><input class="act-in" value="${UI.esc(rec.email || "")}" readonly></div>
+      <div style="margin-bottom:16px"><label class="act-lab">New password</label><input class="act-in" type="password" data-setpw="pwd" placeholder="At least 6 characters" autocomplete="new-password" spellcheck="false"></div>
+      <div style="margin-bottom:6px"><label class="act-lab">Confirm password</label><input class="act-in" type="password" data-setpw="pwd2" placeholder="Re-enter your password" autocomplete="new-password" spellcheck="false"></div>
+      <button class="act-cta" data-act="activate:setpw:${rec.token}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Activate &amp; create my account</button>
+      <div class="act-seal">${lockIc}<div>Sealed 72-hour link for <span style="font-family:ui-monospace,monospace">${UI.esc(rec.email || "")}</span>. Your password is stored hashed (Argon2id in the live build) — never in plain text. Delivered via <span style="font-family:ui-monospace,monospace">${UI.esc(ch.from || "")}</span>.</div></div>
+      </div></div>`;
+  }
+
+  return { state, portal, landingSection, seedStrip, registerPage, activatePage, dropInner };
 })();
