@@ -2108,6 +2108,35 @@ window.DATA = (function () {
   function activeTenants() { return TENANTS.filter(t => t.status === "active"); }
   function pendingKyc() { return (window.REG && REG.pending) ? REG.pending() : REGISTRATIONS.filter(r => r.status === "pending"); }
 
+  /* ---------------- new tenant from an activated registration ----------------
+     Activation creates a real, live shop: a unique tenant id, the owner seeded
+     as the first person, and valid (zeroed) seats/quota/storage/books so every
+     Owner screen renders cleanly from day one. Shared-schema multitenancy — a
+     new tenant is rows, not servers. */
+  function slugId(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 16); }
+  function createTenant(opts) {
+    opts = opts || {};
+    let id = slugId(opts.company || opts.id) || "shop";
+    const base = id; let n = 2; while (byId(id)) { id = base + n; n++; }
+    const short = ((opts.company || id).replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase()) || "SH";
+    const ownerName = opts.owner || "Owner";
+    const t = {
+      id, name: opts.company || ("Shop " + id), short,
+      entity: opts.entity || "sole", biz: opts.biz || "services", locale: opts.lang === "en" ? "en" : "lo",
+      status: "active", plan: "Free", level: "L0", headcount: 1, since: opts.since || "2026-06-18",
+      sites: [],
+      seats: { staff: { used: 0, limit: 10 }, manager: { used: 0, limit: 3 }, admin: { used: 1, limit: 1 } },
+      quota: { line: { used: 0, limit: 50 }, whatsapp: { used: 0, limit: 50 } },
+      storage: { used: 0, limit: 2 }, owner: ownerName,
+      month: { revenue: 0, otherExp: 0, channelFee: 0 }, isNew: true
+    };
+    TENANTS.push(t);
+    PEOPLE[id] = [P(short + "-001", ownerName, "Owner / Sys-Admin", "Management", 3500000, "present", { access: "owner", team: "Management" })];
+    LEDGER[id] = []; RECUR_EXPENSES[id] = [];
+    AUDIT.unshift({ fact: "tenant.created", who: "system", when: "2026-06-18", ref: id + " · " + t.name });
+    return id;
+  }
+
   // platform totals
   function platformStats() {
     const act = activeTenants();
@@ -2121,7 +2150,7 @@ window.DATA = (function () {
   return {
     TENANTS, PEOPLE, SS, PIT_BRACKETS, PAYSLIP, PAYRUNS, LEDGER, ROLLUP, TAX_PERIODS,
     ATT_TODAY, LEAVE_REQS, SHIFTS, RECUR_EXPENSES, REGISTRATIONS, OUTBOX, AUDIT, TEAMS,
-    state, byId, cur, setTenant, people, me, activeTenants, pendingKyc, platformStats, teamsFor
+    state, byId, cur, setTenant, people, me, activeTenants, pendingKyc, platformStats, teamsFor, createTenant
   };
 })();
 
@@ -2781,6 +2810,11 @@ window.MAIL = (function () {
   const TODAY = "2026-06-17";
 
   /* ---------------- the one SMTP server every email goes through ---------------- */
+  // Pre-filled with the staging Gmail SMTP details. The App Password is the ONE
+  // thing the operator must enter at runtime — it is held in memory for the session
+  // only and is NEVER written to any file, the bundle, or the database (for a real
+  // send it lives as a Cloudflare Worker secret). hasSecret starts FALSE so the
+  // administrator's first page prompts for it until it's entered.
   const DEFAULT = {
     provider: "SMTP",                       // SMTP | ESP (HTTP API)
     host: "smtp.gmail.com",
@@ -2790,15 +2824,18 @@ window.MAIL = (function () {
     from: "adeptio.stage@gmail.com",        // consumer Gmail forces From = the authenticated address
     fromName: "Adeptio HR",
     replyTo: "",
-    hasSecret: true                         // App Password held server-side (never stored here)
+    hasSecret: false                        // App Password not entered yet → prompt for it
   };
   let cfg = Object.assign({}, DEFAULT);
+  let secret = "";                          // runtime-only; never serialised to a file/bundle/DB
 
   // status is DERIVED, never stored stale — keeps back-compat with the old REG channel
   // (which was "connected" once host + from were present).
   function status() { return (cfg.host && cfg.from) ? "connected" : "not configured"; }
+  // ready to actually send only once the App Password is in (transport + auth both present)
   function credentialsSet() { return !!(cfg.username && cfg.hasSecret); }
-  function config() { return Object.assign({}, cfg, { status: status() }); }
+  function ready() { return status() === "connected" && credentialsSet(); }
+  function config() { return Object.assign({}, cfg, { status: status(), ready: ready() }); }
   // the shape the KYC card / REG.getChannel() expect
   function asChannel() { return { provider: cfg.provider, host: cfg.host, port: cfg.port, from: cfg.from, secure: cfg.security !== "none", status: status() }; }
 
@@ -2808,11 +2845,17 @@ window.MAIL = (function () {
       if (obj[k] !== undefined && String(obj[k]).trim() !== "") cfg[k] = String(obj[k]).trim();
     });
     if (obj.port !== undefined && String(obj.port).trim() !== "") cfg.port = parseInt(obj.port, 10) || cfg.port;
-    if (obj.secret) cfg.hasSecret = true;                 // a secret was entered → held server-side
+    if (obj.secret && String(obj.secret).trim() !== "") {  // App Password entered → held in memory only
+      secret = String(obj.secret).replace(/\s+/g, "");      // Gmail shows the 16-char key in 4 groups; strip the display spaces
+      cfg.hasSecret = true;
+      DATA.AUDIT.unshift({ fact: "comms.secret_set", who: "Platform", when: TODAY, ref: "Gmail App Password stored in session memory (not persisted)" });
+    }
     if (obj.hasSecret !== undefined) cfg.hasSecret = !!obj.hasSecret;
     DATA.AUDIT.unshift({ fact: "comms.server_set", who: "Platform", when: TODAY, ref: cfg.provider + " · " + cfg.host + ":" + cfg.port });
     return config();
   }
+  // length only — never expose the secret itself (lets the UI show "16-char key set")
+  function secretLen() { return secret.length; }
 
   /* ---------------- Gmail / Workspace one-tap presets ---------------- */
   const PRESETS = {
@@ -2863,7 +2906,8 @@ window.MAIL = (function () {
   let log = SEED.slice();
   const logList = () => log.slice();
   function record(to, subject, kind) {
-    const rec = { to, subject, kind, when: TODAY + " 17:00", via: cfg.host, state: status() === "connected" ? "sent" : "queued" };
+    // honest state: we can only mark "sent" once the App Password is in; otherwise it waits
+    const rec = { to, subject, kind, when: TODAY + " 17:00", via: cfg.host, state: ready() ? "sent" : "queued" };
     log.unshift(rec);
     DATA.OUTBOX.unshift({ to, ch: "email", tpl: subject, when: rec.when, lang: "EN·ລາວ" });
     return rec;
@@ -2906,6 +2950,7 @@ window.MAIL = (function () {
 
   function __reset() {
     cfg = Object.assign({}, DEFAULT);
+    secret = "";
     threshold = 75;
     CATALOG.filter(c => c.kind === "alert").forEach(c => alerts[c.key] = c.def);
     log = SEED.slice();
@@ -2913,7 +2958,7 @@ window.MAIL = (function () {
 
   return {
     TODAY, config, asChannel, save, applyPreset, PRESETS, CATALOG,
-    alertOn, toggleAlert, getThreshold, setThreshold, credentialsSet, recipients,
+    alertOn, toggleAlert, getThreshold, setThreshold, credentialsSet, ready, secretLen, recipients,
     log: logList, send, test, record, tenantBreaches, breachingTenants, alertResource, status, __reset
   };
 })();
@@ -2965,21 +3010,70 @@ window.REG = (function () {
     DATA.AUDIT.unshift({ fact: "kyc.registered", who: form.owner || "applicant", when: TODAY, ref: id + " · " + (form.company || "") });
     return r;
   }
-  function sendConfirmation(r) { // password delivery / email confirmation via the channel
-    DATA.OUTBOX.unshift({ to: r.owner + " <" + r.email + ">", ch: "email", tpl: "Activate your account · set password (72-h link)", when: TODAY + " 17:00", lang: "EN·ລາວ" });
-    DATA.AUDIT.unshift({ fact: "auth.invite", who: "system", when: TODAY, ref: r.email + " · via " + getChannel().provider });
+  /* ---------------- activation tokens (the 72-h set-password link) ----------------
+     Each activation issues a single-use token. The email carries #/activate/<token>;
+     opening it lands on the set-password page, which creates the real login account
+     and a live tenant, then marks the token used. Tokens live in memory (sealed; a
+     real build keeps them in db_registration). */
+  const TOKENS = {};
+  let lastIssued = null;
+  function genToken() { const c = "abcdefghijkmnpqrstuvwxyz0123456789"; let s = ""; for (let i = 0; i < 28; i++) s += c[Math.floor(Math.random() * c.length)]; return s; }
+  function addDays(iso, n) { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+  function issueToken(r) {
+    const token = genToken();
+    TOKENS[token] = {
+      token, regId: r.id, email: r.email, name: r.owner, company: r.company,
+      persona: "owner", scopes: ["owner"], role: "Owner",
+      entity: r.entity, biz: r.biz, lang: r.lang, noKyc: !!r.noKyc,
+      issued: TODAY, expires: addDays(TODAY, 3), used: false
+    };
+    r.token = token; r.activateBy = TOKENS[token].expires;
+    lastIssued = TOKENS[token];
+    return token;
+  }
+  const linkOf = (token) => "#/activate/" + token;        // the working in-app route
+  function tokenInfo(token) {
+    const rec = TOKENS[token];
+    if (!rec) return { state: "invalid", rec: null };
+    if (rec.used) return { state: "used", rec };
+    if (rec.expires < TODAY) return { state: "expired", rec };
+    return { state: "valid", rec };
+  }
+  // the final step of "create a new account": the owner sets their password → a real
+  // sign-in-able account + a fresh live tenant; the token is then spent.
+  function setPassword(token, pwd) {
+    const info = tokenInfo(token);
+    if (info.state !== "valid") return { ok: false, err: info.state === "used" ? "This link has already been used — try signing in." : info.state === "expired" ? "This link has expired. Ask the operator to re-send it." : "This activation link isn't valid." };
+    if (!pwd || String(pwd).length < 6) return { ok: false, err: "Choose a password of at least 6 characters." };
+    const rec = info.rec, r = get(rec.regId);
+    const tenant = DATA.createTenant({ company: rec.company, owner: rec.name, entity: rec.entity, biz: rec.biz, lang: rec.lang });
+    if (r) { r.tenant = tenant; r.status = "active"; r.activated = true; }
+    const account = window.AUTH ? AUTH.addAccount({ email: rec.email, pwd: String(pwd), name: rec.name, persona: "owner", scopes: ["owner"], tenant, role: "Owner" }) : null;
+    rec.used = true; rec.usedAt = TODAY;
+    DATA.AUDIT.unshift({ fact: "auth.password_set", who: rec.email, when: TODAY, ref: rec.regId + " · activation complete" });
+    DATA.AUDIT.unshift({ fact: "auth.account_created", who: "system", when: TODAY, ref: rec.email + " · owner · tenant " + tenant });
+    return { ok: true, account, tenant, persona: "owner", email: rec.email, name: rec.name };
+  }
+
+  function sendConfirmation(r) { // issue the link + send it through the ONE platform mail server
+    const token = r.token || issueToken(r);
+    const subject = r.noKyc ? "Your Adeptio access link · set your password" : "Activate your account · set your password (72-h link)";
+    if (window.MAIL) MAIL.send("activation", r.owner + " <" + r.email + ">", subject);
+    else DATA.OUTBOX.unshift({ to: r.owner + " <" + r.email + ">", ch: "email", tpl: subject, when: TODAY + " 17:00", lang: "EN·ລາວ" });
+    DATA.AUDIT.unshift({ fact: "auth.invite", who: "system", when: TODAY, ref: r.email + " · set-password link via " + getChannel().provider });
+    return token;
   }
   // random temporary password (no ambiguous chars)
   function genPassword() { const c = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"; let p = ""; for (let i = 0; i < 10; i++) p += c[Math.floor(Math.random() * c.length)]; return p; }
-  // no-KYC instant registration (KYC feature off): auto-activate + email an access link · username = email · random password
+  // no-KYC instant registration (KYC feature off): active immediately + email the
+  // set-password link (username = email). Same link mechanism as the KYC path.
   function registerInstant(form) {
     if (!list) seed();
     const id = "REG-" + (480 + list.length), pwd = genPassword();
     const r = Object.assign({ id, submitted: TODAY, status: "active", match: "n/a", deadline: deadlineFrom(TODAY), noKyc: true, tempPwd: pwd }, form);
     list.unshift(r);
     DATA.AUDIT.unshift({ fact: "registration.instant", who: form.owner || "applicant", when: TODAY, ref: id + " · " + (form.company || "") + " · no-KYC" });
-    DATA.OUTBOX.unshift({ to: form.email, ch: "email", tpl: "Your Adeptio access link · username " + form.email + " · temporary password", when: TODAY + " 17:00", lang: "EN·ລາວ" });
-    DATA.AUDIT.unshift({ fact: "auth.invite", who: "system", when: TODAY, ref: form.email + " · instant access (no-KYC) via " + getChannel().provider });
+    sendConfirmation(r); // issues token + emails the set-password access link via the platform server
     return r;
   }
   function activate(id) { const r = get(id); if (!r) return; r.status = "active"; DATA.AUDIT.unshift({ fact: "kyc.activated", who: "Platform", when: TODAY, ref: id }); sendConfirmation(r); return r; }
@@ -3003,9 +3097,9 @@ window.REG = (function () {
 
   const autoDisable = () => ({ on: autoDisableOn, days: autoDisableDays });
   function setAutoDisable(on, days) { autoDisableOn = !!on; if (days) autoDisableDays = days; DATA.AUDIT.unshift({ fact: "kyc.autodisable_" + (on ? "on" : "off"), who: "Platform", when: TODAY, ref: autoDisableDays + "d" }); }
-  function __reset() { list = null; autoDisableOn = true; autoDisableDays = 7; kycEnabled = false; Object.assign(channel, { provider: "SMTP", host: "smtp.adeptio.la", port: 465, from: "noreply@adeptio.la", secure: true, status: "connected" }); if (window.MAIL) MAIL.__reset(); }
+  function __reset() { list = null; autoDisableOn = true; autoDisableDays = 7; kycEnabled = false; for (const k in TOKENS) delete TOKENS[k]; lastIssued = null; Object.assign(channel, { provider: "SMTP", host: "smtp.adeptio.la", port: 465, from: "noreply@adeptio.la", secure: true, status: "connected" }); if (window.MAIL) MAIL.__reset(); }
 
-  return { TODAY, all, pending, get, counts, submit, registerInstant, activate, reject, disable, sendConfirmation, getChannel, setChannel, testChannel, autoDisable, setAutoDisable, kycOn, setKyc, __reset };
+  return { TODAY, all, pending, get, counts, submit, registerInstant, activate, reject, disable, sendConfirmation, getChannel, setChannel, testChannel, autoDisable, setAutoDisable, kycOn, setKyc, issueToken, linkOf, tokenInfo, setPassword, lastIssued: () => lastIssued, __reset };
 })();
 
 ;
@@ -4160,7 +4254,23 @@ window.AUTH = (function () {
   const defaultAccount = (persona) => accountsFor(persona).slice(-1)[0] || accountsFor(persona)[0];
   const stats = () => ({ accounts: ACCOUNTS.length, active: ACCOUNTS.length });
 
-  return { ACCOUNTS, portalOn, setPortal, session, signIn, signOut, primaryScope, accountsFor, defaultAccount, stats, find };
+  // Create (or update) a real, sign-in-able account — used when a registration is
+  // activated and its owner sets a password through the activation link. The new
+  // account then appears in the Owner sign-in frame and authenticates like any other.
+  function addAccount(a) {
+    if (!a || !a.email || !a.pwd) return null;
+    const email = String(a.email).trim().toLowerCase();
+    const rec = {
+      email, pwd: a.pwd, name: a.name || email, persona: a.persona || "owner",
+      scopes: (a.scopes && a.scopes.slice()) || ["owner"], tenant: a.tenant || null,
+      role: a.role || "Owner", created: true
+    };
+    const i = ACCOUNTS.findIndex(x => x.email.toLowerCase() === email);
+    if (i >= 0) ACCOUNTS[i] = Object.assign(ACCOUNTS[i], rec); else ACCOUNTS.push(rec);
+    return rec;
+  }
+
+  return { ACCOUNTS, portalOn, setPortal, session, signIn, signOut, primaryScope, accountsFor, defaultAccount, stats, find, addAccount };
 })();
 
 ;
@@ -5460,9 +5570,24 @@ window.SCR_PLATFORM = (function () {
             ${segMeter("Workers / day", 12, 100, { unit: "k" })}
             ${segMeter("Storage (GB)", 0.6, 10, { unit: "GB" })}
           </div><div class="seal-note ok" style="margin-top:12px">${icon("check")} Shared-schema multi-tenancy — a new tenant is rows, not servers. Free-tier headroom is wide.</div>`, { icon: "pulse" });
+      // First thing the operator sees until the Gmail App Password is entered: a
+      // persistent prompt with an inline field (held in memory only, never written to a file).
+      const needSecret = window.MAIL && !MAIL.credentialsSet();
+      const secretAlert = needSecret ? `<div class="kyc-master off" style="margin-bottom:16px;border-color:#e7c9a6;background:#fdf6ec">
+        <span class="km-ic" style="background:#f4e3c8;color:#b87514">${icon("alert")}</span>
+        <div class="km-main">
+          <div class="km-t">Enter your Gmail App Password <span class="badge bad">not set</span></div>
+          <div class="km-s">The mail server is pre-configured (<span class="mono">smtp.gmail.com · 465 · adeptio.stage@gmail.com</span>) but can't actually send activation or password emails until you paste its 16-character Gmail App Password. It's held in memory for this session only — never saved to a file.</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:11px">
+            <input class="input sm" type="password" data-msq autocomplete="off" placeholder="paste the 16-char App Password" style="max-width:280px">
+            <button class="btn sm" data-act="mail:quicksecret">${icon("check")} Save App Password</button>
+            <button class="btn ghost sm" data-go="platform/web/communications">${icon("mail")} Open Communications</button>
+          </div>
+        </div>
+      </div>` : "";
       return {
         title: "Platform overview", sub: "Tenants live · platform load · alerts",
-        body: master + `
+        body: secretAlert + master + `
         <div class="tilegrid" style="margin-bottom:16px">
           ${tile({ label: "Tenants live", icon: "store", value: st.tenants, sub: `of ${st.total} registered`, accent: true })}
           ${kyc ? tile({ label: "Pending KYC", icon: "idcard", value: st.pending, sub: `<span class="badge warn">needs review</span>`, go: "platform/web/registrations" }) : tile({ label: "Storage", icon: "box", value: "0.6", sub: "GB · shared" })}
@@ -5483,7 +5608,12 @@ window.SCR_PLATFORM = (function () {
 
     registrations() {
       const pend = REG.pending(), c = REG.counts(), ch = REG.getChannel(), ad = REG.autoDisable(), focus = pend.find(r => r.match === "strong") || pend[0];
+      const li = REG.lastIssued && REG.lastIssued(), liOpen = li && REG.tokenInfo(li.token).state === "valid";
+      const liCard = liOpen ? `<div class="seal-note ok" style="margin:0 0 16px;align-items:center">${icon("mail")}<div style="flex:1"><b>Activation link sent</b> — emailed to <span class="mono">${li.email}</span> for ${li.company}. <span class="small muted">Demo: open it to set the password and finish creating the account.</span></div><button class="btn sm" data-go="activate/${li.token}">${icon("send")} Open set-password page</button></div>` : "";
       const stB = (s) => s === "active" ? badge("active") : s === "pending" ? `<span class="badge warn">pending</span>` : s === "disabled" ? `<span class="badge bad">disabled</span>` : `<span class="badge bad">${s}</span>`;
+      const rowAction = (r) => r.status === "pending"
+        ? `<button class="btn xs soft" data-act="kyc:activate:${r.id}">Activate</button> <button class="btn xs ghost" data-act="kyc:disable:${r.id}">Disable</button>`
+        : (r.token && REG.tokenInfo(r.token).state === "valid" ? `<button class="btn xs soft" data-go="activate/${r.token}">Open link</button>` : "");
       const sw = (on) => `<button class="switch" aria-checked="${on}" role="switch" data-act="kyc:autodisable"></button>`;
       return {
         title: "KYC & registration", sub: "one hub — register queue · ID↔selfie review · email channel · auto-disable",
@@ -5494,6 +5624,7 @@ window.SCR_PLATFORM = (function () {
             <div class="sl-it"><span class="sl-v num">${c.disabled}</span><span class="sl-l">auto-disabled</span></div>
             <div class="sl-it"><span class="sl-v num">${c.total}</span><span class="sl-l">total</span></div>
           </div>
+          ${liCard}
           <div class="grid cols-2">
             ${card("Email channel — password delivery & confirmation", `
               <div style="display:flex;flex-direction:column;gap:10px">
@@ -5531,8 +5662,7 @@ window.SCR_PLATFORM = (function () {
             { icon: "idcard", badge: `<span class="badge warn">${c.pending} pending</span>` }) : card("KYC queue", empty("check", "Queue clear", "No pending registrations"), { icon: "idcard" })) +
           `<div style="height:16px"></div>` +
           card("All registrations", table([{ h: "Ref" }, { h: "Company" }, { h: "Owner" }, { h: "Submitted" }, { h: "Deadline" }, { h: "Status" }, { h: "" }], REG.all().map(r => ({
-            cells: [`<span class="idtag">${r.id}</span>`, r.company, r.owner, r.submitted, `<span class="small">${r.deadline || "—"}</span>`, stB(r.status),
-            r.status === "pending" ? `<button class="btn xs soft" data-act="kyc:activate:${r.id}">Activate</button> <button class="btn xs ghost" data-act="kyc:disable:${r.id}">Disable</button>` : ""]
+            cells: [`<span class="idtag">${r.id}</span>`, r.company, r.owner, r.submitted, `<span class="small">${r.deadline || "—"}</span>`, stB(r.status), rowAction(r)]
           }))), { icon: "list" })
       };
     },
@@ -5768,8 +5898,10 @@ window.SCR_PLATFORM = (function () {
   const mobile = {
     overview() {
       const st = DATA.platformStats();
+      const needSecret = window.MAIL && !MAIL.credentialsSet();
+      const secretAlert = needSecret ? `<div class="seal-note" style="margin:0 0 12px;border-color:#e7c9a6;background:#fdf6ec;color:#8a5a16">${icon("alert")}<div style="flex:1"><b>Enter your Gmail App Password</b> — emails can't send until it's set.<div style="display:flex;gap:6px;margin-top:8px"><input class="input sm" type="password" data-msq placeholder="16-char App Password" style="flex:1"><button class="btn sm" data-act="mail:quicksecret">${icon("check")} Save</button></div></div></div>` : "";
       return {
-        title: "Platform", body: `
+        title: "Platform", body: secretAlert + `
         ${tile({ label: "Tenants live", icon: "store", value: st.tenants, sub: `of ${st.total}`, accent: true })}
         ${tile({ label: "Pending KYC", icon: "idcard", value: st.pending, sub: "needs review" })}
         ${card("KYC queue", rowlist(DATA.pendingKyc().map(r => rowitem({ icon: "idcard", title: r.company, sub: r.owner, side: `<button class="btn xs soft" data-go="platform/mobile/registrations">Review</button>` }))))}`
@@ -6140,7 +6272,12 @@ window.AUTHV = (function () {
           <h2 style="font-size:27px;font-weight:800;letter-spacing:-.02em;margin:0">${kyc ? "Registration submitted" : "Account created"}</h2>
           <p style="font-size:15px;color:#6b7088;line-height:1.7;margin:12px 0 0">${kyc
         ? `Your shop is registered and <b style="color:#1b1e34">pending review</b>. A Platform Administrator verifies your ID + selfie, activates you, then emails a <b style="color:#1b1e34">72-hour link to set your password</b> — sent via <span style="font-family:ui-monospace,monospace;color:#3a4db0">${UI.esc(ch.provider)}</span>. Nothing is operational until you're activated.`
-        : `Your account is <b style="color:#1b1e34">live</b>. We've emailed your <b style="color:#1b1e34">access link</b> — your <b style="color:#1b1e34">username is your email</b>, with a temporary password to change on first sign-in. Sent via <span style="font-family:ui-monospace,monospace;color:#3a4db0">${UI.esc(ch.provider)}</span>.`}</p>
+        : `Your shop is registered. We've emailed your <b style="color:#1b1e34">activation link</b> — your <b style="color:#1b1e34">username is your email</b>. Open the link to set your password and finish creating your account. Sent via <span style="font-family:ui-monospace,monospace;color:#3a4db0">${UI.esc(ch.provider)}</span>.`}</p>
+          ${(!kyc && window.REG && REG.lastIssued && REG.lastIssued()) ? `<div style="background:#eef0fb;border:1px solid #dadcf3;border-radius:14px;padding:16px 18px;margin-top:24px;text-align:left">
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#3a4db0;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg> Demo · your inbox</div>
+            <div style="font-size:13.5px;color:#52567a;line-height:1.5;margin-bottom:12px">In a live deployment this link arrives by email. For the demo, open it here:</div>
+            <button class="reg-cta" style="box-shadow:none;font-size:14.5px;padding:13px" data-go="activate/${REG.lastIssued().token}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg> Open my activation email</button>
+          </div>` : ""}
           <div style="display:flex;gap:10px;justify-content:center;margin-top:26px">
             <button class="reg-link" data-go="launcher"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg> Back to start</button>
             <button class="reg-cta" style="width:auto;padding:11px 20px;font-size:14.5px;box-shadow:none" data-go="register">Register another shop</button>
@@ -6197,7 +6334,56 @@ window.AUTHV = (function () {
     </main></div>`;
   }
 
-  return { state, portal, landingSection, seedStrip, registerPage, dropInner };
+  /* activation / set-password landing — where the email's #/activate/<token> link lands.
+     Completes account creation: the owner picks a password → real login account + live shop. */
+  function activatePage(token) {
+    const info = window.REG ? REG.tokenInfo(token) : { state: "invalid", rec: null };
+    const rec = info.rec;
+    const css = `<style>
+      .act-root *{box-sizing:border-box}
+      .act-root{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:auto;z-index:50;background:#f6f4ef;color:#1b1e34;font-family:'Plus Jakarta Sans','Manrope',system-ui,sans-serif;padding:40px 20px}
+      .act-card{width:100%;max-width:470px;background:#fff;border:1px solid #ececf3;border-radius:22px;padding:38px 36px;box-shadow:0 30px 70px -40px rgba(40,46,90,.5);animation:regIn .5s ease both}
+      .act-brand{display:flex;align-items:center;gap:12px;margin-bottom:26px}
+      .act-mk{width:44px;height:44px;border-radius:13px;background:linear-gradient(160deg,#384aa6,#3a4db0);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:21px}
+      .act-in{width:100%;padding:14px 16px;font-size:15px;font-family:inherit;border:1px solid #e3e4ef;border-radius:13px;background:#fff;color:#1b1e34;transition:.18s}
+      .act-in:focus{outline:none;border-color:#3a4db0;box-shadow:0 0 0 4px rgba(58,77,176,.12)}
+      .act-in[readonly]{background:#f5f5fa;color:#6b7088}
+      .act-lab{display:block;font-size:13.5px;font-weight:600;color:#2c3047;margin:0 0 7px}
+      .act-cta{width:100%;border:none;cursor:pointer;background:linear-gradient(180deg,#43539e,#3a4db0);color:#fff;font-family:inherit;font-size:16px;font-weight:700;padding:16px;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 12px 28px -10px rgba(58,77,176,.6);transition:.18s;margin-top:6px}
+      .act-cta:hover{transform:translateY(-2px)}
+      .act-link{display:inline-flex;align-items:center;gap:6px;color:#3a4db0;font-weight:600;font-size:14px;cursor:pointer;background:none;border:1px solid #e3e4ef;padding:10px 16px;border-radius:11px}
+      .act-seal{display:flex;gap:9px;align-items:flex-start;background:#f3f4fd;border:1px solid #e3e4ef;color:#52567a;border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.5;margin-top:18px}
+      @keyframes regIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    </style>`;
+    const brand = `<div class="act-brand"><span class="act-mk">A</span><div><div style="font-weight:800;font-size:17px;letter-spacing:-.02em">Adeptio <span style="font-weight:500;opacity:.7">Owner Edition</span></div><div style="font-size:12.5px;color:#8a8fa3">Account activation</div></div></div>`;
+    const lockIc = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7a7fa3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+
+    if (info.state !== "valid") {
+      const msg = info.state === "used"
+        ? { ic: "#2f9e5e", t: "Already activated", p: "This link has already been used. Your account is set up — head to sign-in.", b: `<button class="act-cta" style="max-width:200px;margin:22px auto 0" data-go="login">${icon("key")} Go to sign-in</button>` }
+        : info.state === "expired"
+          ? { ic: "#c9772f", t: "Link expired", p: "This 72-hour activation link has expired. Register again, or ask the Platform operator to re-send your link.", b: `<button class="act-link" style="margin:22px auto 0" data-go="register">Register again</button>` }
+          : { ic: "#c0392b", t: "Invalid link", p: "We couldn't find that activation link. Check the full URL from your email, or start again.", b: `<button class="act-link" style="margin:22px auto 0" data-go="launcher">Back to start</button>` };
+      return `${css}<div class="act-root"><div class="act-card" style="text-align:center">${brand}
+        <div style="width:64px;height:64px;border-radius:50%;background:#f3f4fd;display:flex;align-items:center;justify-content:center;margin:6px auto 16px"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="${msg.ic}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg></div>
+        <h2 style="font-size:23px;font-weight:800;margin:0">${msg.t}</h2>
+        <p style="font-size:14.5px;color:#6b7088;line-height:1.65;margin:10px 0 0">${msg.p}</p>
+        <div style="display:flex;justify-content:center">${msg.b}</div></div></div>`;
+    }
+
+    const ch = window.MAIL ? MAIL.config() : { from: "adeptio.stage@gmail.com" };
+    return `${css}<div class="act-root"><div class="act-card">${brand}
+      <h2 style="font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0">Set your password</h2>
+      <p style="font-size:14.5px;color:#6b7088;line-height:1.6;margin:9px 0 24px">Welcome, <b style="color:#1b1e34">${UI.esc(rec.name || "there")}</b> — activate <b style="color:#1b1e34">${UI.esc(rec.company || "your shop")}</b>. Your username is your email; pick a password to finish creating your account.</p>
+      <div style="margin-bottom:16px"><label class="act-lab">Email · your username</label><input class="act-in" value="${UI.esc(rec.email || "")}" readonly></div>
+      <div style="margin-bottom:16px"><label class="act-lab">New password</label><input class="act-in" type="password" data-setpw="pwd" placeholder="At least 6 characters" autocomplete="new-password" spellcheck="false"></div>
+      <div style="margin-bottom:6px"><label class="act-lab">Confirm password</label><input class="act-in" type="password" data-setpw="pwd2" placeholder="Re-enter your password" autocomplete="new-password" spellcheck="false"></div>
+      <button class="act-cta" data-act="activate:setpw:${rec.token}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Activate &amp; create my account</button>
+      <div class="act-seal">${lockIc}<div>Sealed 72-hour link for <span style="font-family:ui-monospace,monospace">${UI.esc(rec.email || "")}</span>. Your password is stored hashed (Argon2id in the live build) — never in plain text. Delivered via <span style="font-family:ui-monospace,monospace">${UI.esc(ch.from || "")}</span>.</div></div>
+      </div></div>`;
+  }
+
+  return { state, portal, landingSection, seedStrip, registerPage, activatePage, dropInner };
 })();
 
 ;
@@ -6232,6 +6418,7 @@ window.AUTHV = (function () {
     const h = location.hash.replace(/^#\/?/, "");
     if (h === "login") return (AUTH.portalOn() && AUTH.session()) ? landingRoute(AUTH.session()) : { view: "login" };
     if (h === "register" || h === "register/done") return { view: "register", done: h === "register/done" }; // public — bypasses the wall (KYC on = full flow · off = instant no-KYC)
+    if (h === "activate" || h.indexOf("activate/") === 0) return { view: "activate", token: decodeURIComponent(h.split("/")[1] || "") }; // public set-password link — bypasses the wall
     if (!h || h === "launcher") return { view: "launcher" };
     // wall: sign-in mode + no session → login (focus the entered persona)
     if (AUTH.portalOn() && !AUTH.session()) {
@@ -6511,10 +6698,11 @@ window.AUTHV = (function () {
   function render() {
     const r = route();
     document.body.dataset.persona = r.view === "app" ? r.persona : (r.view === "login" ? AUTHV.state.focus : "");
-    document.body.dataset.portal = (r.view === "login" || r.view === "register") ? "1" : "";
+    document.body.dataset.portal = (r.view === "login" || r.view === "register" || r.view === "activate") ? "1" : "";
     let html;
     if (r.view === "login") html = AUTHV.portal();
     else if (r.view === "register") html = AUTHV.registerPage(r.done);
+    else if (r.view === "activate") html = AUTHV.activatePage(r.token);
     else if (r.view === "launcher") html = launcher();
     else if (r.view === "app") html = r.device === "mobile" ? mobileShell(r) : (PERSONAS[r.persona].twoTier ? twoTierShell(r) : railShell(r));
     // day-summary popup overlays the owner web console wherever the team grid lives (dashboard or full calendar)
@@ -6635,6 +6823,8 @@ window.AUTHV = (function () {
     if (val === "pay:commit") return payCommit();
     // ---- registration + KYC ----
     if (val === "register:submit") return registerSubmit();
+    if (val.startsWith("activate:setpw:")) return activateSetPw(val.slice("activate:setpw:".length));
+    if (val === "mail:quicksecret") return mailQuickSecret();
     if (val.startsWith("kyc:feature:")) { REG.setKyc(val.split(":")[2] === "on"); render(); return toast("KYC & registration " + (REG.kycOn() ? "enabled" : "disabled · related menus hidden") + " platform-wide"); }
     if (val.startsWith("kyc:activate:")) { REG.activate(val.split(":")[2]); render(); return toast("Activated — confirmation email sent via " + REG.getChannel().provider); }
     if (val.startsWith("kyc:reject:")) { REG.reject(val.split(":")[2], "not verified"); render(); return toast("Registration rejected (reason logged)"); }
@@ -6787,7 +6977,26 @@ window.AUTHV = (function () {
   function mailSave() {
     const g = (k) => { const el = document.querySelector(`[data-ms="${k}"]`); return el ? el.value.trim() : ""; };
     MAIL.save({ provider: g("provider"), host: g("host"), port: g("port"), security: g("security"), username: g("username"), from: g("from"), fromName: g("fromName"), replyTo: g("replyTo"), secret: g("secret") });
-    render(); toast("Mail server saved · " + MAIL.config().status);
+    render(); toast(MAIL.config().ready ? "Mail server saved · ready to send ✓" : "Mail server saved · " + MAIL.config().status);
+  }
+  // admin first-page (or Communications) inline App Password entry — held in memory only
+  function mailQuickSecret() {
+    const el = document.querySelector("[data-msq]"), v = el ? el.value.trim() : "";
+    if (!v) return toast("Paste the 16-character Gmail App Password first.", "warn");
+    MAIL.save({ secret: v });
+    render(); toast("Gmail App Password saved (in memory) — mail server ready ✓");
+  }
+  // activation link → set password → create the account, then sign straight in to prove it works
+  function activateSetPw(token) {
+    const pwd = (document.querySelector('[data-setpw="pwd"]') || {}).value || "";
+    const pwd2 = (document.querySelector('[data-setpw="pwd2"]') || {}).value || "";
+    if (!pwd || pwd.length < 6) return toast("Choose a password of at least 6 characters.", "warn");
+    if (pwd !== pwd2) return toast("The two passwords don't match.", "warn");
+    const res = REG.setPassword(token, pwd);
+    if (!res.ok) return toast(res.err, "warn");
+    const si = AUTH.signIn(res.email, pwd);
+    if (si.ok) { AUTHV.state.err = ""; toast("Welcome, " + String(res.name || "").split(" ")[0] + " — your account is ready."); return go(res.persona + "/web/" + defScreen(res.persona)); }
+    AUTHV.state.focus = res.persona; toast("Account created — sign in with " + res.email); return go("login");
   }
   function paySaveDraft() {
     const tid = DATA.state.tenantId, by = {};
